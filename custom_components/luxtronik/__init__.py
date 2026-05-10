@@ -8,7 +8,7 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TIMEOUT, Platform as P
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.exceptions import ConfigEntryNotReady, ServiceValidationError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity_registry import (
     async_get,
@@ -94,6 +94,18 @@ def setup_hass_services(hass: HomeAssistant, entry: ConfigEntry):
         parameter = service.data.get(ATTR_PARAMETER)
         # convert to int needed for Unknown parameters
         value = convert_to_int_if_possible(service.data.get(ATTR_VALUE))
+
+        if not parameter or not isinstance(parameter, str):
+            raise ServiceValidationError(f"Invalid parameter name: {parameter}")
+
+        # Only allow writing to known writable parameter prefixes
+        writable_prefixes = ("ID_Einst_", "ID_Ba_", "ID_Soll_", "ID_Sollwert_")
+        if not parameter.startswith(writable_prefixes):
+            raise ServiceValidationError(
+                f"Parameter '{parameter}' rejected — only parameters with "
+                f"prefixes {writable_prefixes} are writable"
+            )
+
         data = hass.data[DOMAIN].get(entry.entry_id)
         coordinator: LuxtronikCoordinator = data[CONF_COORDINATOR]
         await coordinator.async_write(parameter, value)
