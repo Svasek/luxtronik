@@ -18,7 +18,6 @@ from .common import convert_to_int_if_possible
 from .const import (
     ATTR_PARAMETER,
     ATTR_VALUE,
-    CONF_COORDINATOR,
     CONF_HA_SENSOR_PREFIX,
     CONF_MAX_DATA_LENGTH,
     CONFIG_ENTRY_VERSION,
@@ -38,6 +37,8 @@ from .lux_overrides import update_Luxtronik_HeatpumpCodes, update_Luxtronik_Para
 
 # endregion Imports
 
+type LuxtronikConfigEntry = ConfigEntry[LuxtronikCoordinator]
+
 # override HeatpumpCode datatype, so it includes recent Heatpump models
 update_Luxtronik_HeatpumpCodes()
 # update/extend Luxtronik.Parameters
@@ -46,10 +47,9 @@ update_Luxtronik_Parameters()
 LOGGER.info("Custom HeatpumpCode and Parameters overrides applied.")
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: LuxtronikConfigEntry) -> bool:
     """Set up Luxtronik from a config entry."""
 
-    data = hass.data.setdefault(DOMAIN, {})
     config = entry.data
 
     try:
@@ -61,7 +61,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
-    data[entry.entry_id] = {CONF_COORDINATOR: coordinator}
+    entry.runtime_data = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -86,7 +86,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-def setup_hass_services(hass: HomeAssistant, entry: ConfigEntry):
+def setup_hass_services(hass: HomeAssistant, entry: LuxtronikConfigEntry):
     """Home Assistant services."""
 
     async def write_parameter(service):
@@ -94,8 +94,7 @@ def setup_hass_services(hass: HomeAssistant, entry: ConfigEntry):
         parameter = service.data.get(ATTR_PARAMETER)
         # convert to int needed for Unknown parameters
         value = convert_to_int_if_possible(service.data.get(ATTR_VALUE))
-        data = hass.data[DOMAIN].get(entry.entry_id)
-        coordinator: LuxtronikCoordinator = data[CONF_COORDINATOR]
+        coordinator = entry.runtime_data
         await coordinator.async_write(parameter, value)
 
     hass.services.async_register(
@@ -103,17 +102,17 @@ def setup_hass_services(hass: HomeAssistant, entry: ConfigEntry):
     )
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: LuxtronikConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        data = hass.data[DOMAIN].pop(entry.entry_id)
-        coordinator: LuxtronikCoordinator = data[CONF_COORDINATOR]
-        await coordinator.async_shutdown()
+        await entry.runtime_data.async_shutdown()
 
     return unload_ok
 
 
-async def update_listener(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+async def update_listener(
+    hass: HomeAssistant, config_entry: LuxtronikConfigEntry
+) -> None:
     """Handle options update."""
     await hass.config_entries.async_reload(config_entry.entry_id)
 

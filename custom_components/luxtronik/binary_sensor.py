@@ -6,13 +6,13 @@ from __future__ import annotations
 from homeassistant.components.binary_sensor import ENTITY_ID_FORMAT, BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from . import LuxtronikConfigEntry
 from .base import LuxtronikEntity
 from .binary_sensor_entities_predefined import BINARY_SENSORS
 from .common import get_sensor_data, key_exists
-from .const import CONF_COORDINATOR, CONF_HA_SENSOR_PREFIX, DOMAIN, LOGGER, DeviceKey
+from .const import CONF_HA_SENSOR_PREFIX, LOGGER, DeviceKey
 from .coordinator import LuxtronikCoordinator, LuxtronikCoordinatorData
 from .model import LuxtronikBinarySensorEntityDescription
 
@@ -20,19 +20,13 @@ from .model import LuxtronikBinarySensorEntityDescription
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant,
+    entry: LuxtronikConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Luxtronik binary sensors dynamically through Luxtronik discovery."""
 
-    data = hass.data.get(DOMAIN, {}).get(entry.entry_id)
-    if not data or CONF_COORDINATOR not in data:
-        raise ConfigEntryNotReady
-
-    coordinator: LuxtronikCoordinator = data[CONF_COORDINATOR]
-
-    # Ensure coordinator has valid data before adding entities
-    if not coordinator.last_update_success:
-        raise ConfigEntryNotReady
+    coordinator = entry.runtime_data
 
     unavailable_keys = [
         i.luxtronik_key

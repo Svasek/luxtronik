@@ -13,7 +13,6 @@ from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 
 from .common import async_get_mac_address
-from .const import CONF_COORDINATOR, DOMAIN
 from .coordinator import LuxtronikCoordinator
 
 # endregion Imports
@@ -25,8 +24,7 @@ async def async_get_config_entry_diagnostics(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> Mapping[str, Any]:
     """Return diagnostics for a config entry."""
-    data: dict = hass.data[DOMAIN][entry.entry_id]
-    coordinator: LuxtronikCoordinator = data[CONF_COORDINATOR]
+    coordinator: LuxtronikCoordinator = entry.runtime_data
 
     # Optionally refresh data to ensure it's up to date
     await coordinator.async_request_refresh()

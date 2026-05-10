@@ -13,16 +13,14 @@ from homeassistant.components.update import UpdateEntity, UpdateEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from . import LuxtronikConfigEntry
 from .base import LuxtronikEntity
 from .const import (
     CHANGELOG_URL,
-    CONF_COORDINATOR,
     CONF_HA_SENSOR_PREFIX,
-    DOMAIN,
     DOWNLOAD_PORTAL_URL,
     FIRMWARE_UPDATE_MANUAL_DE,
     FIRMWARE_UPDATE_MANUAL_EN,
@@ -42,15 +40,13 @@ MIN_TIME_BETWEEN_UPDATES: Final = timedelta(hours=1)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant,
+    entry: LuxtronikConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Luxtronik binary sensors dynamically through Luxtronik discovery."""
 
-    data = hass.data.get(DOMAIN, {}).get(entry.entry_id)
-    if not data or CONF_COORDINATOR not in data:
-        raise ConfigEntryNotReady
-
-    coordinator: LuxtronikCoordinator = data[CONF_COORDINATOR]
+    coordinator = entry.runtime_data
 
     description = LuxtronikUpdateEntityDescription(
         luxtronik_key=LuxCalculation.C0081_FIRMWARE_VERSION,

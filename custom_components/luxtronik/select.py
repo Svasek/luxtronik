@@ -4,18 +4,16 @@ from homeassistant.components.binary_sensor import ENTITY_ID_FORMAT
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from . import LuxtronikConfigEntry
 from .base import LuxtronikEntity
 from .common import get_sensor_data
 from .const import (
-    CONF_COORDINATOR,
     CONF_HA_SENSOR_PREFIX,
     DAY_NAME_TO_PARAM,
     DAY_SELECTOR_OPTIONS,
-    DOMAIN,
     LOGGER,
     DeviceKey,
     LuxDaySelectorParameter,
@@ -28,19 +26,13 @@ from .model import LuxtronikEntityDescription
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant,
+    entry: LuxtronikConfigEntry,
+    async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Luxtronik Select entities"""
 
-    data = hass.data.get(DOMAIN, {}).get(entry.entry_id)
-    if not data or CONF_COORDINATOR not in data:
-        raise ConfigEntryNotReady
-
-    coordinator: LuxtronikCoordinator = data[CONF_COORDINATOR]
-
-    # Ensure coordinator has valid data before adding entities
-    if not coordinator.last_update_success:
-        raise ConfigEntryNotReady
+    coordinator = entry.runtime_data
 
     thermal_desinfection_description = LuxtronikEntityDescription(
         key=SK.THERMAL_DESINFECTION_DAY,
