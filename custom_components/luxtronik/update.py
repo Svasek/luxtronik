@@ -64,10 +64,10 @@ async def async_setup_entry(
     async_add_entities(entities, True)
 
 
-class LuxtronikUpdateEntity(LuxtronikEntity, UpdateEntity):
+class LuxtronikUpdateEntity(
+    LuxtronikEntity[LuxtronikUpdateEntityDescription], UpdateEntity
+):  # type: ignore
     """Representation of Luxtronik firmware update entity."""
-
-    entity_description: LuxtronikUpdateEntityDescription
 
     _attr_title = "Luxtronik Firmware Version"
     _attr_supported_features: UpdateEntityFeature = (

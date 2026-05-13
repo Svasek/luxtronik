@@ -60,7 +60,7 @@ async def async_setup_entry(
         name="Heating mode",
     )
 
-    entities: list[LuxtronikEntity] = [
+    entities: list[LuxtronikEntity[LuxtronikEntityDescription]] = [
         LuxtronikThermalDesinfectionDaySelector(
             entry,
             coordinator,
@@ -81,7 +81,9 @@ async def async_setup_entry(
     async_add_entities(entities, True)
 
 
-class LuxtronikThermalDesinfectionDaySelector(LuxtronikEntity, SelectEntity):
+class LuxtronikThermalDesinfectionDaySelector(
+    LuxtronikEntity[LuxtronikEntityDescription], SelectEntity
+):  # type: ignore
     """Luxtronik Thermal Desinfection Day Selector Entity."""
 
     def __init__(
@@ -167,7 +169,9 @@ class LuxtronikThermalDesinfectionDaySelector(LuxtronikEntity, SelectEntity):
         self._attr_current_option = selected_day
 
 
-class LuxtronikDhwModeSelector(LuxtronikEntity, SelectEntity):
+class LuxtronikDhwModeSelector(
+    LuxtronikEntity[LuxtronikEntityDescription], SelectEntity
+):  # type: ignore
     """Luxtronik Domestic Hot Water Mode Selector."""
 
     def __init__(
@@ -242,7 +246,9 @@ class LuxtronikDhwModeSelector(LuxtronikEntity, SelectEntity):
         self._handle_coordinator_update(updated_data)
 
 
-class LuxtronikHeatingModeSelector(LuxtronikEntity, SelectEntity):
+class LuxtronikHeatingModeSelector(
+    LuxtronikEntity[LuxtronikEntityDescription], SelectEntity
+):  # type: ignore
     """Luxtronik Heating Mode Selector."""
 
     def __init__(

@@ -56,10 +56,11 @@ async def async_setup_entry(
     )
 
 
-class LuxtronikBinarySensorEntity(LuxtronikEntity, BinarySensorEntity):
+class LuxtronikBinarySensorEntity(
+    LuxtronikEntity[LuxtronikBinarySensorEntityDescription], BinarySensorEntity
+):  # type: ignore
     """Luxtronik Binary Sensor Entity."""
 
-    entity_description: LuxtronikBinarySensorEntityDescription
     _coordinator: LuxtronikCoordinator
 
     def __init__(
