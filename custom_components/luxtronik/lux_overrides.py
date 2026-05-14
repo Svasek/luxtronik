@@ -23,6 +23,9 @@ def update_Luxtronik_Parameters():
     Parameters.parameters.update(parameters_to_add_update)
 
 
+_INSTANCE_DATA_ISOLATED = False
+
+
 def isolate_instance_data():
     """Patch library classes to use instance-level data dicts.
 
@@ -34,6 +37,11 @@ def isolate_instance_data():
     This patches ``__init__`` so every new instance gets its own deep copy
     of the class-level dict.
     """
+    global _INSTANCE_DATA_ISOLATED
+    if _INSTANCE_DATA_ISOLATED:
+        return
+    _INSTANCE_DATA_ISOLATED = True
+
     _orig_params_init = Parameters.__init__
 
     def _params_init(self, safe=True):
