@@ -40,7 +40,6 @@ def isolate_instance_data():
     global _INSTANCE_DATA_ISOLATED
     if _INSTANCE_DATA_ISOLATED:
         return
-    _INSTANCE_DATA_ISOLATED = True
 
     _orig_params_init = Parameters.__init__
 
@@ -65,6 +64,8 @@ def isolate_instance_data():
         self.visibilities = deepcopy(Visibilities.visibilities)
 
     Visibilities.__init__ = _vis_init
+
+    _INSTANCE_DATA_ISOLATED = True
 
 
 def update_Luxtronik_HeatpumpCodes():

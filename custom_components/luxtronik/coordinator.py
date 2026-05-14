@@ -523,10 +523,10 @@ async def connect_and_get_coordinator(
     """Try to connect to a Luxtronik device and return coordinator."""
     global _OVERRIDES_APPLIED
     if not _OVERRIDES_APPLIED:
-        _OVERRIDES_APPLIED = True
         update_Luxtronik_HeatpumpCodes()
         update_Luxtronik_Parameters()
         isolate_instance_data()
+        _OVERRIDES_APPLIED = True
         LOGGER.info(
             "Library overrides applied (HeatpumpCodes, Parameters, instance data isolation)."
         )
