@@ -25,7 +25,7 @@ async def async_get_config_entry_diagnostics(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> Mapping[str, Any]:
     """Return diagnostics for a config entry."""
-    data: dict = hass.data[DOMAIN][entry.entry_id]
+    data: dict[str, Any] = hass.data[DOMAIN][entry.entry_id]
     coordinator: LuxtronikCoordinator = data[CONF_COORDINATOR]
 
     # Optionally refresh data to ensure it's up to date
@@ -51,7 +51,7 @@ async def async_get_config_entry_diagnostics(
     return diag_data
 
 
-def _dump_items(items: dict) -> dict:
+def _dump_items(items: dict[int, Any]) -> dict[str, str]:
     dump = {}
     for index, item in sorted(items.items()):
         dump[f"{index:<4d} {item.name:<60}"] = f"{item}"

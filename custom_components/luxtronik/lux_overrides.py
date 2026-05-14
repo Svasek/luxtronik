@@ -16,7 +16,7 @@ parameters_to_add_update = {
 
 
 def update_Luxtronik_Parameters():
-    Parameters.parameters.update(parameters_to_add_update)
+    Parameters.parameters.update(parameters_to_add_update)  # pyright: ignore[reportCallIssue, reportArgumentType]
 
 
 def update_Luxtronik_HeatpumpCodes():
