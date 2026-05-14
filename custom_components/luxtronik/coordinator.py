@@ -522,6 +522,8 @@ async def connect_and_get_coordinator(
 ) -> LuxtronikCoordinator:
     """Try to connect to a Luxtronik device and return coordinator."""
     global _OVERRIDES_APPLIED
+    # No lock needed: all override calls are synchronous (no await),
+    # so the event loop cannot preempt between the guard check and flag set.
     if not _OVERRIDES_APPLIED:
         update_Luxtronik_HeatpumpCodes()
         update_Luxtronik_Parameters()

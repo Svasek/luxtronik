@@ -37,31 +37,33 @@ def isolate_instance_data():
     This patches ``__init__`` so every new instance gets its own deep copy
     of the class-level dict.
     """
+    # No lock needed: called only from synchronous code path (no await),
+    # so the event loop cannot preempt between the guard check and flag set.
     global _INSTANCE_DATA_ISOLATED
     if _INSTANCE_DATA_ISOLATED:
         return
 
     _orig_params_init = Parameters.__init__
 
-    def _params_init(self, safe=True):
-        _orig_params_init(self, safe)
-        self.parameters = deepcopy(Parameters.parameters)
+    def _params_init(self, *args, **kwargs):
+        _orig_params_init(self, *args, **kwargs)
+        self.parameters = deepcopy(self.parameters)
 
     Parameters.__init__ = _params_init
 
     _orig_calcs_init = Calculations.__init__
 
-    def _calcs_init(self):
-        _orig_calcs_init(self)
-        self.calculations = deepcopy(Calculations.calculations)
+    def _calcs_init(self, *args, **kwargs):
+        _orig_calcs_init(self, *args, **kwargs)
+        self.calculations = deepcopy(self.calculations)
 
     Calculations.__init__ = _calcs_init
 
     _orig_vis_init = Visibilities.__init__
 
-    def _vis_init(self):
-        _orig_vis_init(self)
-        self.visibilities = deepcopy(Visibilities.visibilities)
+    def _vis_init(self, *args, **kwargs):
+        _orig_vis_init(self, *args, **kwargs)
+        self.visibilities = deepcopy(self.visibilities)
 
     Visibilities.__init__ = _vis_init
 
