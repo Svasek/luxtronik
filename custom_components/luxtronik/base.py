@@ -38,6 +38,7 @@ class LuxtronikEntity(CoordinatorEntity[LuxtronikCoordinator], RestoreEntity):
 
     entity_description: LuxtronikEntityDescription
     next_update: datetime | None = None
+    _attr_state: Any = None  # Any: values come from luxtronik library (untyped)
 
     _entity_component_unrecorded_attributes = frozenset(
         {
@@ -70,19 +71,19 @@ class LuxtronikEntity(CoordinatorEntity[LuxtronikCoordinator], RestoreEntity):
                 else:
                     self._attr_extra_state_attributes[field] = value
         if description.entity_registry_enabled_default:
-            description.entity_registry_enabled_default = coordinator.entity_visible(
+            description.entity_registry_enabled_default = coordinator.entity_visible(  # pyright: ignore[reportAttributeAccessIssue]
                 description
             )
         self.entity_description = description
         self._attr_device_info = coordinator.get_device(device_info_ident)
 
         translation_key = (
-            description.key.value
+            description.key.value  # pyright: ignore[reportAttributeAccessIssue]
             if description.translation_key_name is None
             else description.translation_key_name
         )
-        description.translation_key = translation_key
-        description.has_entity_name = True
+        description.translation_key = translation_key  # pyright: ignore[reportAttributeAccessIssue]
+        description.has_entity_name = True  # pyright: ignore[reportAttributeAccessIssue]
         self._attr_state = self._get_value(description.luxtronik_key)
 
     async def async_added_to_hass(self) -> None:
@@ -164,9 +165,9 @@ class LuxtronikEntity(CoordinatorEntity[LuxtronikCoordinator], RestoreEntity):
             self._attr_icon = descr.icon
 
         if hasattr(self, "_attr_current_operation") and self._attr_icon is not None:
-            if self._attr_current_operation == STATE_OFF:
+            if self._attr_current_operation == STATE_OFF:  # pyright: ignore[reportAttributeAccessIssue]
                 self._attr_icon += "-off"
-            elif self._attr_current_operation == STATE_HEAT_PUMP:
+            elif self._attr_current_operation == STATE_HEAT_PUMP:  # pyright: ignore[reportAttributeAccessIssue]
                 self._attr_icon += "-auto"
 
         self._enrich_extra_attributes()
@@ -176,14 +177,14 @@ class LuxtronikEntity(CoordinatorEntity[LuxtronikCoordinator], RestoreEntity):
     def compute_is_on(self, state: Any) -> bool:
         descr = self.entity_description
 
-        if isinstance(descr.on_state, bool) and state is not None:
+        if isinstance(descr.on_state, bool) and state is not None:  # pyright: ignore[reportAttributeAccessIssue]
             state = bool(state)
 
         is_on = bool(
-            state == descr.on_state or (descr.on_states and state in descr.on_states)
+            state == descr.on_state or (descr.on_states and state in descr.on_states)  # pyright: ignore[reportAttributeAccessIssue]
         )
 
-        return not is_on if descr.inverted else is_on
+        return not is_on if descr.inverted else is_on  # pyright: ignore[reportAttributeAccessIssue]
 
     def _enrich_extra_attributes(self) -> None:
         for attr in self.entity_description.extra_attributes:

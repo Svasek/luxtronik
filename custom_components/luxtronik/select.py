@@ -1,6 +1,9 @@
 """Support for Luxtronik selectors"""
 
-from homeassistant.components.select import ENTITY_ID_FORMAT, SelectEntity
+from homeassistant.components.select import (
+    ENTITY_ID_FORMAT,  # pyright: ignore[reportAttributeAccessIssue]
+    SelectEntity,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback

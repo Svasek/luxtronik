@@ -46,7 +46,7 @@ try:
     from homeassistant.components.water_heater import WaterHeaterEntityDescription
 except ImportError:
     from homeassistant.components.water_heater import (
-        WaterHeaterEntityEntityDescription as WaterHeaterEntityDescription,
+        WaterHeaterEntityEntityDescription as WaterHeaterEntityDescription,  # pyright: ignore[reportAttributeAccessIssue]
     )
 
 # endregion Imports
@@ -194,7 +194,7 @@ def metaclass_resolver(*classes):
 
 
 class LuxtronikWaterHeaterDescription(
-    metaclass_resolver(LuxtronikEntityDescription, WaterHeaterEntityDescription)
+    metaclass_resolver(LuxtronikEntityDescription, WaterHeaterEntityDescription)  # pyright: ignore[reportGeneralTypeIssues]
 ):
     """Class describing Luxtronik water heater entities."""
 
