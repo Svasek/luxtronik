@@ -373,7 +373,10 @@ class TestLuxtronikReadData:
     @patch("custom_components.luxtronik.lux_helper.socket.socket")
     def test_read_data_oversized_length(self, mock_socket_class):
         """Data with length > max_data_length should be skipped."""
-        from custom_components.luxtronik.lux_helper import LUXTRONIK_PARAMETERS_READ, LUXTRONIK_SOCKET_READ_SIZE_INTEGER
+        from custom_components.luxtronik.lux_helper import (
+            LUXTRONIK_PARAMETERS_READ,
+            LUXTRONIK_SOCKET_READ_SIZE_INTEGER,
+        )
 
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -387,14 +390,23 @@ class TestLuxtronikReadData:
         client._socket = mock_sock
         parser = MagicMock()
 
-        client._read_data(LUXTRONIK_PARAMETERS_READ, LUXTRONIK_SOCKET_READ_SIZE_INTEGER, parser, "test", retries=0)
+        client._read_data(
+            LUXTRONIK_PARAMETERS_READ,
+            LUXTRONIK_SOCKET_READ_SIZE_INTEGER,
+            parser,
+            "test",
+            retries=0,
+        )
 
         parser.parse.assert_not_called()
 
     @patch("custom_components.luxtronik.lux_helper.socket.socket")
     def test_read_data_success_parameters(self, mock_socket_class):
         """Successfully reads parameter data."""
-        from custom_components.luxtronik.lux_helper import LUXTRONIK_PARAMETERS_READ, LUXTRONIK_SOCKET_READ_SIZE_INTEGER
+        from custom_components.luxtronik.lux_helper import (
+            LUXTRONIK_PARAMETERS_READ,
+            LUXTRONIK_SOCKET_READ_SIZE_INTEGER,
+        )
 
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -411,14 +423,23 @@ class TestLuxtronikReadData:
         client._socket = mock_sock
         parser = MagicMock()
 
-        client._read_data(LUXTRONIK_PARAMETERS_READ, LUXTRONIK_SOCKET_READ_SIZE_INTEGER, parser, "params", retries=0)
+        client._read_data(
+            LUXTRONIK_PARAMETERS_READ,
+            LUXTRONIK_SOCKET_READ_SIZE_INTEGER,
+            parser,
+            "params",
+            retries=0,
+        )
 
         parser.parse.assert_called_once_with([100, 200])
 
     @patch("custom_components.luxtronik.lux_helper.socket.socket")
     def test_read_data_calculations_has_stat_field(self, mock_socket_class):
         """Calculations read includes extra stat field."""
-        from custom_components.luxtronik.lux_helper import LUXTRONIK_CALCULATIONS_READ, LUXTRONIK_SOCKET_READ_SIZE_INTEGER
+        from custom_components.luxtronik.lux_helper import (
+            LUXTRONIK_CALCULATIONS_READ,
+            LUXTRONIK_SOCKET_READ_SIZE_INTEGER,
+        )
 
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -434,14 +455,23 @@ class TestLuxtronikReadData:
         client._socket = mock_sock
         parser = MagicMock()
 
-        client._read_data(LUXTRONIK_CALCULATIONS_READ, LUXTRONIK_SOCKET_READ_SIZE_INTEGER, parser, "calcs", retries=0)
+        client._read_data(
+            LUXTRONIK_CALCULATIONS_READ,
+            LUXTRONIK_SOCKET_READ_SIZE_INTEGER,
+            parser,
+            "calcs",
+            retries=0,
+        )
 
         parser.parse.assert_called_once_with([42])
 
     @patch("custom_components.luxtronik.lux_helper.socket.socket")
     def test_read_data_visibilities_zero_length_disconnects(self, mock_socket_class):
         """Visibilities with length <= 0 forces disconnect."""
-        from custom_components.luxtronik.lux_helper import LUXTRONIK_VISIBILITIES_READ, LUXTRONIK_SOCKET_READ_SIZE_CHAR
+        from custom_components.luxtronik.lux_helper import (
+            LUXTRONIK_VISIBILITIES_READ,
+            LUXTRONIK_SOCKET_READ_SIZE_CHAR,
+        )
 
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -455,7 +485,13 @@ class TestLuxtronikReadData:
         client._socket = mock_sock
         parser = MagicMock()
 
-        client._read_data(LUXTRONIK_VISIBILITIES_READ, LUXTRONIK_SOCKET_READ_SIZE_CHAR, parser, "vis", retries=0)
+        client._read_data(
+            LUXTRONIK_VISIBILITIES_READ,
+            LUXTRONIK_SOCKET_READ_SIZE_CHAR,
+            parser,
+            "vis",
+            retries=0,
+        )
 
         parser.parse.assert_not_called()
         assert client._socket is None  # disconnected
@@ -464,7 +500,10 @@ class TestLuxtronikReadData:
     @patch("custom_components.luxtronik.lux_helper.socket.socket")
     def test_read_data_retry_on_timeout(self, mock_socket_class, mock_sleep):
         """Retries on TimeoutError."""
-        from custom_components.luxtronik.lux_helper import LUXTRONIK_PARAMETERS_READ, LUXTRONIK_SOCKET_READ_SIZE_INTEGER
+        from custom_components.luxtronik.lux_helper import (
+            LUXTRONIK_PARAMETERS_READ,
+            LUXTRONIK_SOCKET_READ_SIZE_INTEGER,
+        )
 
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -489,7 +528,13 @@ class TestLuxtronikReadData:
         client._socket = mock_sock
         parser = MagicMock()
 
-        client._read_data(LUXTRONIK_PARAMETERS_READ, LUXTRONIK_SOCKET_READ_SIZE_INTEGER, parser, "params", retries=1)
+        client._read_data(
+            LUXTRONIK_PARAMETERS_READ,
+            LUXTRONIK_SOCKET_READ_SIZE_INTEGER,
+            parser,
+            "params",
+            retries=1,
+        )
 
         parser.parse.assert_called_once_with([99])
         mock_sleep.assert_called_once_with(1)
@@ -497,7 +542,10 @@ class TestLuxtronikReadData:
     @patch("custom_components.luxtronik.lux_helper.socket.socket")
     def test_read_data_unexpected_error_disconnects(self, mock_socket_class):
         """Unexpected errors disconnect and return."""
-        from custom_components.luxtronik.lux_helper import LUXTRONIK_PARAMETERS_READ, LUXTRONIK_SOCKET_READ_SIZE_INTEGER
+        from custom_components.luxtronik.lux_helper import (
+            LUXTRONIK_PARAMETERS_READ,
+            LUXTRONIK_SOCKET_READ_SIZE_INTEGER,
+        )
 
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -507,7 +555,13 @@ class TestLuxtronikReadData:
         client._socket = mock_sock
         parser = MagicMock()
 
-        client._read_data(LUXTRONIK_PARAMETERS_READ, LUXTRONIK_SOCKET_READ_SIZE_INTEGER, parser, "params", retries=0)
+        client._read_data(
+            LUXTRONIK_PARAMETERS_READ,
+            LUXTRONIK_SOCKET_READ_SIZE_INTEGER,
+            parser,
+            "params",
+            retries=0,
+        )
 
         parser.parse.assert_not_called()
 

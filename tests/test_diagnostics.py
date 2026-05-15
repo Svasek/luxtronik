@@ -42,7 +42,9 @@ class TestDumpItems:
 class TestAsyncGetConfigEntryDiagnostics:
     @pytest.mark.asyncio
     async def test_returns_diagnostics(self):
-        from custom_components.luxtronik.diagnostics import async_get_config_entry_diagnostics
+        from custom_components.luxtronik.diagnostics import (
+            async_get_config_entry_diagnostics,
+        )
 
         hass = MagicMock()
         hass.async_add_executor_job = AsyncMock(return_value="aa:bb:cc:dd:ee:ff")
@@ -74,7 +76,9 @@ class TestAsyncGetConfigEntryDiagnostics:
 
     @pytest.mark.asyncio
     async def test_no_mac(self):
-        from custom_components.luxtronik.diagnostics import async_get_config_entry_diagnostics
+        from custom_components.luxtronik.diagnostics import (
+            async_get_config_entry_diagnostics,
+        )
 
         hass = MagicMock()
         hass.async_add_executor_job = AsyncMock(return_value=None)

@@ -225,12 +225,12 @@ class TestCorrectKeyValue:
         data = make_coordinator_data(
             calculations={
                 "ID_WEB_HauptMenuStatus_Zeile3": LuxStatus3Option.heating,
-                "ID_WEB_Temperatur_TVL": 20.0,   # C0010 flow in
-                "ID_WEB_Temperatur_TRL": 25.0,    # C0011 flow out (> in)
-                "ID_WEB_Temperatur_TWE": 10.0,    # C0204 heat source in
-                "ID_WEB_Temperatur_TWA": 15.0,    # C0024 heat source out (> in)
-                "ID_WEB_Durchfluss_WQ": 5.0,      # C0173 flow rate (> 0)
-                "ID_WEB_VBOout": True,             # C0043 pump flow (True)
+                "ID_WEB_Temperatur_TVL": 20.0,  # C0010 flow in
+                "ID_WEB_Temperatur_TRL": 25.0,  # C0011 flow out (> in)
+                "ID_WEB_Temperatur_TWE": 10.0,  # C0204 heat source in
+                "ID_WEB_Temperatur_TWA": 15.0,  # C0024 heat source out (> in)
+                "ID_WEB_Durchfluss_WQ": 5.0,  # C0173 flow rate (> 0)
+                "ID_WEB_VBOout": True,  # C0043 pump flow (True)
             }
         )
         result = correct_key_value(LuxOperationMode.no_request, data, LC.C0080_STATUS)
@@ -241,7 +241,7 @@ class TestCorrectKeyValue:
         data = make_coordinator_data(
             calculations={
                 "ID_WEB_HauptMenuStatus_Zeile3": LuxStatus3Option.heating,
-                "ID_WEB_Temperatur_TVL": 25.0,   # flow in > out → not cooling
+                "ID_WEB_Temperatur_TVL": 25.0,  # flow in > out → not cooling
                 "ID_WEB_Temperatur_TRL": 20.0,
                 "ID_WEB_Temperatur_TWE": 10.0,
                 "ID_WEB_Temperatur_TWA": 15.0,

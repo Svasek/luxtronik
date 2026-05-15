@@ -95,8 +95,12 @@ class TestLatestVersion:
         from unittest.mock import MagicMock, PropertyMock
 
         entity = MagicMock(spec=LuxtronikUpdateEntity)
-        entity.latest_version = LuxtronikUpdateEntity.latest_version.fget.__get__(entity)
-        entity.update_available = LuxtronikUpdateEntity.update_available.fget.__get__(entity)
+        entity.latest_version = LuxtronikUpdateEntity.latest_version.fget.__get__(
+            entity
+        )
+        entity.update_available = LuxtronikUpdateEntity.update_available.fget.__get__(
+            entity
+        )
         return entity
 
     def test_latest_version_none_when_no_available(self):

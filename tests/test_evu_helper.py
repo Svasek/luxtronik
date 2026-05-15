@@ -109,16 +109,53 @@ class TestEVUTrackerGetAttributes:
 
     def test_evu_status_suffix_active(self):
         tracker = LuxtronikEVUTracker()
-        tracker._evu_first_end = time(12, 0)
-        tracker._evu_days = [0]
-        result = tracker.get_evu_status_suffix(LuxOperationMode.evu)
-        # May return EVU-related suffix string
-        assert isinstance(result, str)
+        with patch.object(tracker, "get_next_event_minutes", return_value=15):
+            result = tracker.get_evu_status_suffix(LuxOperationMode.evu)
+        assert "EVU until" in result
+        assert "15" in result
+
+    def test_evu_status_suffix_upcoming(self):
+        tracker = LuxtronikEVUTracker()
+        with patch.object(tracker, "get_next_event_minutes", return_value=20):
+            result = tracker.get_evu_status_suffix("heating")
+        assert "EVU in" in result
+        assert "20" in result
+
+    def test_evu_status_suffix_far_away(self):
+        tracker = LuxtronikEVUTracker()
+        with patch.object(tracker, "get_next_event_minutes", return_value=60):
+            result = tracker.get_evu_status_suffix("heating")
+        assert result == ""
 
     def test_evu_status_suffix_no_events(self):
         tracker = LuxtronikEVUTracker()
         result = tracker.get_evu_status_suffix("heating")
         assert result == ""
+
+    def test_update_second_slot(self):
+        """EVU transitions use second slot when first slot already used."""
+        from datetime import datetime as dt_cls
+
+        tracker = LuxtronikEVUTracker()
+
+        # Pre-fill first slot so _should_use_first_slot returns False
+        tracker._evu_first_start = time(6, 0)
+        tracker._evu_first_end = time(8, 0)
+
+        # Simulate EVU activation at 14:00 (after first slot)
+        tracker._last_state = "heating"
+        fake_pm = dt_cls(2024, 1, 2, 14, 0)
+        with patch("custom_components.luxtronik.evu_helper.dt_util") as mock_dt:
+            mock_dt.now.return_value = fake_pm
+            tracker.update(LuxOperationMode.evu)
+        assert tracker._evu_second_start == time(14, 0)
+
+        # Simulate EVU deactivation at 16:00
+        fake_pm_end = dt_cls(2024, 1, 2, 16, 0)
+        with patch("custom_components.luxtronik.evu_helper.dt_util") as mock_dt:
+            mock_dt.now.return_value = fake_pm_end
+            tracker.update("heating")
+        assert tracker._evu_second_end == time(16, 0)
 
 
 class TestShouldUseFirstSlot:
