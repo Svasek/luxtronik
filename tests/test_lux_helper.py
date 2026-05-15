@@ -12,6 +12,7 @@ from custom_components.luxtronik.lux_helper import (
     LUXTRONIK_DISCOVERY_MAGIC_PACKET,
     LUXTRONIK_DISCOVERY_RESPONSE_PREFIX,
     Luxtronik,
+    _is_socket_closed,
     discover,
     get_firmware_download_id,
     get_manufacturer_by_model,
@@ -238,3 +239,155 @@ class TestDiscover:
 
         results = discover()
         assert results == []
+
+
+# ===========================================================================
+# _is_socket_closed
+# ===========================================================================
+
+
+class TestIsSocketClosed:
+    def test_negative_fileno(self):
+        sock = MagicMock()
+        sock.fileno.return_value = -1
+        assert _is_socket_closed(sock) is True
+
+    def test_fileno_exception(self):
+        sock = MagicMock()
+        sock.fileno.side_effect = RuntimeError("bad fd")
+        assert _is_socket_closed(sock) is True
+
+    def test_recv_empty_data_means_closed(self):
+        sock = MagicMock()
+        sock.fileno.return_value = 3
+        sock.recv.return_value = b""
+        assert _is_socket_closed(sock) is True
+
+    def test_recv_blocking_io_means_open(self):
+        sock = MagicMock()
+        sock.fileno.return_value = 3
+        sock.recv.side_effect = BlockingIOError
+        assert _is_socket_closed(sock) is False
+
+    def test_recv_connection_reset_means_closed(self):
+        sock = MagicMock()
+        sock.fileno.return_value = 3
+        sock.recv.side_effect = ConnectionResetError
+        assert _is_socket_closed(sock) is True
+
+    def test_recv_os_error_107_means_closed(self):
+        sock = MagicMock()
+        sock.fileno.return_value = 3
+        sock.recv.side_effect = OSError(107, "not connected")
+        assert _is_socket_closed(sock) is True
+
+    def test_recv_other_os_error_means_open(self):
+        sock = MagicMock()
+        sock.fileno.return_value = 3
+        sock.recv.side_effect = OSError(99, "other")
+        assert _is_socket_closed(sock) is False
+
+
+# ===========================================================================
+# Luxtronik._read_write / _write
+# ===========================================================================
+
+
+class TestLuxtronikReadWrite:
+    @patch("custom_components.luxtronik.lux_helper.socket.socket")
+    def test_read_write_os_error_disconnects(self, mock_socket_class):
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+
+        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client._socket = mock_sock
+
+        # Make _read raise OSError
+        with patch.object(client, "_read", side_effect=OSError("socket err")):
+            with pytest.raises(OSError):
+                client._read_write(write=False)
+
+    @patch("custom_components.luxtronik.lux_helper.socket.socket")
+    def test_read_write_struct_error_disconnects(self, mock_socket_class):
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+
+        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client._socket = mock_sock
+
+        with patch.object(client, "_read", side_effect=struct.error("bad data")):
+            with pytest.raises(struct.error):
+                client._read_write(write=False)
+
+    def test_write_no_socket_raises(self):
+        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client._socket = None
+        with pytest.raises(OSError, match="Cannot write"):
+            client._write()
+
+    @patch("custom_components.luxtronik.lux_helper.socket.socket")
+    def test_write_sends_parameters(self, mock_socket_class):
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+        # recv returns packed ints for cmd and val responses
+        mock_sock.recv.return_value = struct.pack(">i", 0)
+
+        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client._socket = mock_sock
+        client.parameters.queue = {1: 42}
+
+        client._write()
+
+        mock_sock.sendall.assert_called_once()
+        assert client.parameters.queue == {}
+
+    @patch("custom_components.luxtronik.lux_helper.socket.socket")
+    def test_write_skips_invalid_params(self, mock_socket_class):
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+
+        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client._socket = mock_sock
+        client.parameters.queue = {"bad_key": "bad_val"}
+
+        client._write()
+
+        mock_sock.sendall.assert_not_called()
+
+    @patch("custom_components.luxtronik.lux_helper.socket.socket")
+    def test_write_converts_float_to_int(self, mock_socket_class):
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+        mock_sock.recv.return_value = struct.pack(">i", 0)
+
+        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client._socket = mock_sock
+        client.parameters.queue = {5: 21.0}
+
+        client._write()
+
+        mock_sock.sendall.assert_called_once()
+
+
+class TestLuxtronikReadData:
+    @patch("custom_components.luxtronik.lux_helper.socket.socket")
+    def test_read_data_oversized_length(self, mock_socket_class):
+        """Data with length > max_data_length should be skipped."""
+        from custom_components.luxtronik.lux_helper import LUXTRONIK_PARAMETERS_READ, LUXTRONIK_SOCKET_READ_SIZE_INTEGER
+
+        mock_sock = MagicMock()
+        mock_socket_class.return_value = mock_sock
+
+        # cmd response, then oversized length
+        mock_sock.recv.side_effect = [
+            struct.pack(">i", LUXTRONIK_PARAMETERS_READ),  # cmd
+            struct.pack(">i", 99999),  # length > max
+        ]
+
+        client = Luxtronik("192.168.1.100", 8889, 10.0, 100)  # max_data_length=100
+        client._socket = mock_sock
+        parser = MagicMock()
+
+        client._read_data(LUXTRONIK_PARAMETERS_READ, LUXTRONIK_SOCKET_READ_SIZE_INTEGER, parser, "test", retries=0)
+
+        parser.parse.assert_not_called()
