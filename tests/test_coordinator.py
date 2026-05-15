@@ -574,3 +574,79 @@ class TestDetectionMethods:
         )
         device = coord.get_device(DeviceKey.heatpump)
         assert device is not None
+
+
+# ===========================================================================
+# LuxtronikConnectionError
+# ===========================================================================
+
+
+class TestLuxtronikConnectionError:
+    def test_message_format(self):
+        orig = ConnectionRefusedError("refused")
+        err = LuxtronikConnectionError("192.168.1.100", 8889, orig)
+        assert "192.168.1.100" in str(err)
+        assert "8889" in str(err)
+        assert "ConnectionRefusedError" in str(err)
+        assert err.host == "192.168.1.100"
+        assert err.port == 8889
+        assert err.original is orig
+
+
+# ===========================================================================
+# connect_and_get_coordinator
+# ===========================================================================
+
+
+class TestConnectAndGetCoordinator:
+    @pytest.fixture(autouse=True)
+    def _reset_overrides_flag(self):
+        """Reset the global _OVERRIDES_APPLIED flag before each test."""
+        import custom_components.luxtronik.coordinator as coord_mod
+        coord_mod._OVERRIDES_APPLIED = False
+        yield
+        coord_mod._OVERRIDES_APPLIED = False
+
+    @pytest.mark.asyncio
+    async def test_connect_failure_raises_connection_error(self):
+        from custom_components.luxtronik.coordinator import connect_and_get_coordinator
+
+        config = {CONF_HOST: "192.168.1.100", CONF_PORT: 8889}
+
+        with patch(
+            "custom_components.luxtronik.coordinator.LuxtronikCoordinator.connect",
+            side_effect=ConnectionRefusedError("refused"),
+        ):
+            with pytest.raises(LuxtronikConnectionError) as exc_info:
+                await connect_and_get_coordinator(MagicMock(), config)
+            assert exc_info.value.host == "192.168.1.100"
+            assert exc_info.value.port == 8889
+
+    @pytest.mark.asyncio
+    async def test_overrides_applied_once(self):
+        import custom_components.luxtronik.coordinator as coord_mod
+        from custom_components.luxtronik.coordinator import connect_and_get_coordinator
+
+        config = {CONF_HOST: "192.168.1.100", CONF_PORT: 8889}
+
+        with patch(
+            "custom_components.luxtronik.coordinator.LuxtronikCoordinator.connect",
+            side_effect=ConnectionRefusedError("refused"),
+        ), patch(
+            "custom_components.luxtronik.coordinator.update_Luxtronik_HeatpumpCodes"
+        ) as mock_hpc, patch(
+            "custom_components.luxtronik.coordinator.update_Luxtronik_Parameters"
+        ) as mock_params, patch(
+            "custom_components.luxtronik.coordinator.isolate_instance_data"
+        ) as mock_iso:
+            # First call applies overrides
+            with pytest.raises(LuxtronikConnectionError):
+                await connect_and_get_coordinator(MagicMock(), config)
+            assert mock_hpc.call_count == 1
+            assert mock_params.call_count == 1
+            assert mock_iso.call_count == 1
+
+            # Second call skips overrides
+            with pytest.raises(LuxtronikConnectionError):
+                await connect_and_get_coordinator(MagicMock(), config)
+            assert mock_hpc.call_count == 1  # not called again
