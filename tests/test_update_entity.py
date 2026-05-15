@@ -90,5 +90,69 @@ class TestVersionIsNewer:
         assert entity.version_is_newer("invalid", "V3.90.1") is False
 
 
+class TestLatestVersion:
+    def _make_entity(self):
+        from unittest.mock import MagicMock, PropertyMock
+
+        entity = MagicMock(spec=LuxtronikUpdateEntity)
+        entity.latest_version = LuxtronikUpdateEntity.latest_version.fget.__get__(entity)
+        entity.update_available = LuxtronikUpdateEntity.update_available.fget.__get__(entity)
+        return entity
+
+    def test_latest_version_none_when_no_available(self):
+        entity = self._make_entity()
+        entity._LuxtronikUpdateEntity__firmware_version_available = None
+        entity._attr_state = "V3.90.1"
+        # Access property through fget
+        result = LuxtronikUpdateEntity.latest_version.fget(entity)
+        assert result is None
+
+    def test_latest_version_none_when_no_installed(self):
+        entity = self._make_entity()
+        entity._LuxtronikUpdateEntity__firmware_version_available = "V3.91.0"
+        entity._attr_state = None
+        # installed_version returns _attr_state
+        type(entity).installed_version = property(lambda s: s._attr_state)
+        result = LuxtronikUpdateEntity.latest_version.fget(entity)
+        assert result is None
+
+    def test_latest_version_strips_build_number(self):
+        entity = self._make_entity()
+        entity._LuxtronikUpdateEntity__firmware_version_available = "V3.91.0-9086"
+        entity._attr_state = "V3.90.1"
+        type(entity).installed_version = property(lambda s: s._attr_state)
+        result = LuxtronikUpdateEntity.latest_version.fget(entity)
+        assert result == "V3.91.0"
+
+
+class TestReleaseNotes:
+    def test_release_notes_none_when_no_download_id(self):
+        from unittest.mock import MagicMock
+
+        entity = MagicMock(spec=LuxtronikUpdateEntity)
+        entity._attr_state = "X99.0.0"  # Unknown prefix → no download ID
+        type(entity).installed_version = property(lambda s: s._attr_state)
+        result = LuxtronikUpdateEntity.release_notes(entity)
+        assert result is None
+
+    def test_release_notes_returns_html(self):
+        from unittest.mock import MagicMock
+
+        entity = MagicMock(spec=LuxtronikUpdateEntity)
+        entity._attr_state = "V3.90.1"
+        type(entity).installed_version = property(lambda s: s._attr_state)
+        entity.coordinator = MagicMock()
+        entity.coordinator.model = "LWP 10"
+        entity.coordinator.manufacturer = "Alpha Innotec"
+        entity._LuxtronikUpdateEntity__firmware_version_available = "V3.91.0"
+        entity._LuxtronikUpdateEntity__firmware_version_changelog = "Bug fixes"
+        entity.hass = MagicMock()
+        entity.hass.config.language = "en"
+        result = LuxtronikUpdateEntity.release_notes(entity)
+        assert result is not None
+        assert "V3.91.0" in result
+        assert "Bug fixes" in result
+
+
 if __name__ == "__main__":
     unittest.main()
