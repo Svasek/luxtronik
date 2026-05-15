@@ -3,6 +3,9 @@
 # region Imports
 from __future__ import annotations
 
+import json
+from pathlib import Path
+import shutil
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
@@ -37,8 +40,62 @@ from .coordinator import LuxtronikCoordinator, connect_and_get_coordinator
 type LuxtronikConfigEntry = ConfigEntry[LuxtronikCoordinator]
 
 
+def _cleanup_old_integration_folder() -> None:
+    """Remove the old ``custom_components/luxtronik/`` folder if it still exists.
+
+    The integration was historically shipped in a folder called ``luxtronik``
+    while the domain has always been ``luxtronik2``.  After the folder was
+    renamed to ``luxtronik2`` to match the domain, the old folder may linger
+    on disk (especially for HACS-managed installations).
+
+    This helper checks for ``../luxtronik/manifest.json`` relative to the
+    current package, verifies that its ``domain`` field is ``luxtronik2``
+    (i.e. it really is the old copy of *this* integration, not an unrelated
+    one), and removes the entire directory tree.
+    """
+    current_dir = Path(__file__).resolve().parent  # .../custom_components/luxtronik2
+    old_dir = current_dir.parent / "luxtronik"  # .../custom_components/luxtronik
+    old_manifest = old_dir / "manifest.json"
+
+    if not old_manifest.is_file():
+        return
+
+    try:
+        manifest_data = json.loads(old_manifest.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as err:
+        LOGGER.warning(
+            "Found old integration folder %s but could not read its manifest: %s",
+            old_dir,
+            err,
+        )
+        return
+
+    if manifest_data.get("domain") != DOMAIN:
+        # Not our old copy - leave it alone.
+        LOGGER.debug(
+            "Folder %s contains domain '%s', not '%s' - skipping cleanup",
+            old_dir,
+            manifest_data.get("domain"),
+            DOMAIN,
+        )
+        return
+
+    LOGGER.warning(
+        "Removing obsolete integration folder %s "
+        "(the integration now lives in custom_components/%s)",
+        old_dir,
+        DOMAIN,
+    )
+    try:
+        shutil.rmtree(old_dir)
+    except OSError as err:
+        LOGGER.error("Failed to remove old integration folder %s: %s", old_dir, err)
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: LuxtronikConfigEntry) -> bool:
     """Set up Luxtronik from a config entry."""
+
+    _cleanup_old_integration_folder()
 
     config = entry.data
 
