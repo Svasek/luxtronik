@@ -1,0 +1,74 @@
+"""Tests for custom_components.luxtronik.schema_helper."""
+
+from __future__ import annotations
+
+import voluptuous as vol
+
+from custom_components.luxtronik.schema_helper import (
+    build_options_schema,
+    build_user_data_schema,
+)
+from custom_components.luxtronik.const import (
+    CONF_HA_SENSOR_INDOOR_TEMPERATURE,
+    CONF_MAX_DATA_LENGTH,
+    DEFAULT_HOST,
+    DEFAULT_MAX_DATA_LENGTH,
+    DEFAULT_PORT,
+    DEFAULT_TIMEOUT,
+)
+from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TIMEOUT
+
+
+class TestBuildUserDataSchema:
+    def test_default_schema(self):
+        schema = build_user_data_schema()
+        assert isinstance(schema, vol.Schema)
+
+    def test_custom_values(self):
+        schema = build_user_data_schema(
+            host="10.0.0.1",
+            port=8888,
+            timeout=30.0,
+            max_data_length=5000,
+        )
+        assert isinstance(schema, vol.Schema)
+
+    def test_schema_validates_valid_data(self):
+        schema = build_user_data_schema()
+        result = schema(
+            {
+                CONF_HOST: "192.168.1.100",
+                CONF_PORT: 8889,
+            }
+        )
+        assert result[CONF_HOST] == "192.168.1.100"
+        assert result[CONF_PORT] == 8889
+
+    def test_schema_uses_defaults(self):
+        schema = build_user_data_schema()
+        result = schema({})
+        # Both host and port have defaults, so empty dict is valid
+        assert CONF_HOST in result
+        assert CONF_PORT in result
+
+    def test_schema_rejects_invalid_port_type(self):
+        schema = build_user_data_schema()
+        with pytest.raises(vol.MultipleInvalid):
+            schema({CONF_HOST: "192.168.1.100", CONF_PORT: "not_a_number"})
+
+
+class TestBuildOptionsSchema:
+    def test_default_schema(self):
+        schema = build_options_schema()
+        assert isinstance(schema, vol.Schema)
+
+    def test_with_current_value(self):
+        schema = build_options_schema(
+            host="10.0.0.1",
+            port=8888,
+            current_value="sensor.indoor_temp",
+        )
+        assert isinstance(schema, vol.Schema)
+
+
+import pytest
