@@ -366,6 +366,42 @@ class TestAsyncAddedToHass:
         assert entity._attr_state == "25.5"
 
     @pytest.mark.asyncio
+    async def test_restores_attr_cache_on_startup(self):
+        """When last_state has restorable attrs, they fill _attr_cache."""
+        desc = LuxtronikSensorDescription(
+            key=SensorKey.FLOW_OUT_TEMPERATURE,
+            luxtronik_key=LC.C0011_FLOW_OUT_TEMPERATURE,
+            device_key=DeviceKey.heatpump,
+            extra_attributes=(
+                LuxtronikEntityAttributeDescription(
+                    key=SA.TIMER_HEATPUMP_ON,
+                    luxtronik_key=LC.C0011_FLOW_OUT_TEMPERATURE,
+                    restore_on_startup=True,
+                ),
+                LuxtronikEntityAttributeDescription(
+                    key=SA.LUXTRONIK_KEY,
+                    luxtronik_key=LC.C0011_FLOW_OUT_TEMPERATURE,
+                    restore_on_startup=False,
+                ),
+            ),
+        )
+        entity = _make_sensor_entity(description=desc)
+        last_state = MagicMock()
+        last_state.state = "25.5"
+        last_state.attributes = {SA.TIMER_HEATPUMP_ON: "restored_value"}
+        entity.async_get_last_state = AsyncMock(return_value=last_state)
+        entity.async_get_last_extra_data = AsyncMock(return_value=None)
+        entity.async_on_remove = MagicMock()
+        entity.entity_id = "sensor.test_entity"
+        entity.platform = MagicMock()
+        entity.coordinator.data = None
+
+        with patch("custom_components.luxtronik2.base.async_dispatcher_connect"):
+            await LuxtronikEntity.async_added_to_hass(entity)
+
+        assert entity._attr_cache[SA.TIMER_HEATPUMP_ON] == "restored_value"
+
+    @pytest.mark.asyncio
     async def test_no_last_state_returns_early(self):
         entity = _make_sensor_entity()
         entity.async_get_last_state = AsyncMock(return_value=None)

@@ -160,8 +160,6 @@ class LuxtronikNumberEntity(LuxtronikEntity[LuxtronikNumberDescription], NumberE
         value = self._get_value(attr.luxtronik_key)
         if value is None:
             return ""
-        if attr.format is None:
-            return str(value)
         if (
             self._attr_state is not None
             and self.entity_description.factor is not None

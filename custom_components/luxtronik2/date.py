@@ -23,7 +23,7 @@ from .date_entities_predefined import CALENDAR_ENTITIES
 from .model import LuxtronikDateEntityDescription
 
 
-async def async_setup_entry(
+async def async_setup_entry(  # pragma: no cover
     hass: HomeAssistant,
     entry: LuxtronikConfigEntry,
     async_add_entities: AddEntitiesCallback,

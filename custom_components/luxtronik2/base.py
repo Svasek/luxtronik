@@ -125,10 +125,14 @@ class LuxtronikEntity[DescriptionT: LuxtronikEntityDescription](  # type: ignore
             self._attr_state = last_state.state
 
             for attr in self.entity_description.extra_attributes:
-                if not attr.restore_on_startup or attr.key not in last_state.attributes:
+                if (
+                    not attr.restore_on_startup or attr.key not in last_state.attributes
+                ):
                     continue
-                self._attr_cache[attr.key] = self._restore_attr_value(
-                    last_state.attributes[attr.key]
+                self._attr_cache[attr.key] = (
+                    self._restore_attr_value(
+                        last_state.attributes[attr.key]
+                    )
                 )
 
             last_extra_data = await self.async_get_last_extra_data()
@@ -224,8 +228,10 @@ class LuxtronikEntity[DescriptionT: LuxtronikEntityDescription](  # type: ignore
                 attr.luxtronik_key is None or attr.luxtronik_key == LP.UNSET
             ):
                 continue
-            self._attr_extra_state_attributes[attr.key.value] = self.formatted_data(
-                attr
+            self._attr_extra_state_attributes[attr.key.value] = (
+                self.formatted_data(
+                    attr
+                )
             )
 
     @callback

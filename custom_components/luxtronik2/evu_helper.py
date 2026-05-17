@@ -74,7 +74,9 @@ class LuxtronikEVUTracker:
                     return evu_time.hour * 60 + evu_time.minute + evu_pause
                 evu_pause += 1440
         else:
-            return (evu_hours - time_now.hour) * 60 + evu_time.minute - time_now.minute
+            return (
+                (evu_hours - time_now.hour) * 60 + evu_time.minute - time_now.minute
+            )
 
     def _get_next_event_time(self, time_now: time) -> time:
         candidates = [
