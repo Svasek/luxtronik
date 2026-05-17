@@ -123,9 +123,9 @@ class TestSwitchAsyncSetupEntry:
             await async_setup_entry(MagicMock(), entry, add)
 
         # At least one entity should be added (from predefined SWITCHES)
-        if add.called:
-            entities = add.call_args[0][0]
-            assert len(entities) > 0
+        add.assert_called_once()
+        entities = add.call_args[0][0]
+        assert len(entities) > 0
 
 
 # ===========================================================================
@@ -219,9 +219,9 @@ class TestBinarySensorAsyncSetupEntry:
         with patch("homeassistant.helpers.frame.report_usage"):
             await async_setup_entry(MagicMock(), entry, add)
 
-        if add.called:
-            entities = add.call_args[0][0]
-            assert len(entities) > 0
+        add.assert_called_once()
+        entities = add.call_args[0][0]
+        assert len(entities) > 0
 
 
 # ===========================================================================
@@ -314,9 +314,9 @@ class TestNumberAsyncSetupEntry:
         with patch("homeassistant.helpers.frame.report_usage"):
             await async_setup_entry(MagicMock(), entry, add)
 
-        if add.called:
-            entities = add.call_args[0][0]
-            assert len(entities) > 0
+        add.assert_called_once()
+        entities = add.call_args[0][0]
+        assert len(entities) > 0
 
 
 # ===========================================================================
@@ -947,9 +947,9 @@ class TestWaterHeaterAsyncSetupEntry:
         with patch("homeassistant.helpers.frame.report_usage"):
             await async_setup_entry(MagicMock(), entry, add)
 
-        if add.called:
-            entities = add.call_args[0][0]
-            assert len(entities) > 0
+        add.assert_called_once()
+        entities = add.call_args[0][0]
+        assert len(entities) > 0
 
 
 # ===========================================================================
@@ -1180,9 +1180,9 @@ class TestClimateAsyncSetupEntry:
         with patch("homeassistant.helpers.frame.report_usage"):
             await async_setup_entry(MagicMock(), entry, add)
 
-        if add.called:
-            entities = add.call_args[0][0]
-            assert len(entities) > 0
+        add.assert_called_once()
+        entities = add.call_args[0][0]
+        assert len(entities) > 0
 
 
 # ===========================================================================

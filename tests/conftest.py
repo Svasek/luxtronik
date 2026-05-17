@@ -134,9 +134,9 @@ DEFAULT_CALCULATIONS = {
     "ID_WEB_SoftStand": "V3.90.1",
     "ID_WEB_Code_WP_akt": 27,
     "ID_WEB_Zaehler_BesijKom": 100,
-    "ID_WEB_Zaehler_BetrSoHz": 200,
-    "ID_WEB_Zaehler_BetrBW": 150,
-    "ID_WEB_Zaehler_BetrKue": 0,
+    "ID_WEB_Zaehler_BetrZeitHz": 200,
+    "ID_WEB_Zaehler_BetrZeitBW": 150,
+    "ID_WEB_Zaehler_BetrZeitKue": 0,
     "ID_WEB_StatusLine_1": "heatpump_running",
     "ID_WEB_StatusLine_3": "heating",
     "ID_WEB_ERROR_Reason": 0,
@@ -155,8 +155,8 @@ DEFAULT_CALCULATIONS = {
     "ID_WEB_Temperatur_TWA": 8.0,
     "ID_WEB_Durchfluss_WQ": 0.0,
     "ID_WEB_LIN_VDH_Pumpe": False,
-    "ID_WEB_EVU": 0,
-    "ID_WEB_EVU2": 1,
+    "ID_WEB_EVUin": 0,
+    "ID_WEB_HZIO_EVU2": 1,
 }
 
 DEFAULT_VISIBILITIES = {
