@@ -555,6 +555,25 @@ class TestDetectionMethods:
         assert device is not None
 
 
+class TestCoordinatorGetDeviceFallback:
+    def test_device_info_none_returns_fallback(self):
+        coord = MagicMock()
+        coord.device_infos = {}
+        coord._create_device_infos = MagicMock()
+        coord.unique_id = "test_uid"
+        result = LuxtronikCoordinator.get_device(coord, DeviceKey.heatpump)
+        assert "identifiers" in result
+
+    def test_build_device_name_with_platform(self):
+        coord = MagicMock()
+        platform = MagicMock()
+        platform.platform_data.platform_translations.get.return_value = "My Heatpump"
+        result = LuxtronikCoordinator._build_device_name(
+            coord, DeviceKey.heatpump, platform
+        )
+        assert result == "My Heatpump"
+
+
 # ===========================================================================
 # LuxtronikConnectionError
 # ===========================================================================

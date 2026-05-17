@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 from conftest import FakeSensorItem
+from homeassistant.const import CONF_HOST
 import pytest
 
 from custom_components.luxtronik2.const import DEFAULT_PORT
@@ -100,3 +101,34 @@ class TestAsyncGetConfigEntryDiagnostics:
 
         result = await async_get_config_entry_diagnostics(hass, entry)
         assert "mac" not in result["entry"]["data"]
+
+
+class TestDiagnosticsNoDataKey:
+    @pytest.mark.asyncio
+    async def test_entry_data_without_data_key(self):
+        from custom_components.luxtronik2.diagnostics import (
+            async_get_config_entry_diagnostics,
+        )
+
+        hass = MagicMock()
+        hass.async_add_executor_job = AsyncMock(return_value=None)
+
+        data = MagicMock()
+        data.parameters.parameters = {}
+        data.calculations.calculations = {}
+        data.visibilities.visibilities = {}
+
+        coordinator = MagicMock()
+        coordinator.async_request_refresh = AsyncMock()
+        coordinator.data = data
+        coordinator.device_infos = {}
+
+        entry = MagicMock()
+        entry.runtime_data = coordinator
+        entry.data = {CONF_HOST: "192.168.1.100"}
+        # as_dict returns WITHOUT "data" key — triggers the branch
+        entry.as_dict.return_value = {"options": {}}
+
+        result = await async_get_config_entry_diagnostics(hass, entry)
+        assert "entry" in result
+        assert "data" in result["entry"]

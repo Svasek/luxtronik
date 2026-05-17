@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from conftest import make_coordinator_data
@@ -34,7 +34,9 @@ from custom_components.luxtronik2.const import (
     SensorKey,
 )
 from custom_components.luxtronik2.model import (
+    LuxtronikClimateDescription,
     LuxtronikEntityAttributeDescription,
+    LuxtronikIndexSensorDescription,
     LuxtronikSensorDescription,
 )
 from custom_components.luxtronik2.sensor import LuxtronikSensorEntity
@@ -160,9 +162,9 @@ class TestShouldUpdate:
             update_interval=timedelta(seconds=60),
         )
         entity = _make_sensor_entity(description=desc)
-        entity.next_update = datetime.now() + timedelta(hours=1)
-        # Should NOT update (future next_update)
-        # Note: this may be True/False depending on utcnow vs now, but the logic is tested
+        # Set next_update far in the future (UTC) so should_update returns False
+        entity.next_update = datetime.now(UTC) + timedelta(hours=1)
+        assert entity.should_update() is False
 
 
 # ===========================================================================
@@ -474,3 +476,211 @@ class TestIconCurrentOperation:
         entity._attr_current_operation = STATE_HEAT_PUMP
         LuxtronikEntity._handle_coordinator_update(entity, data)
         assert entity._attr_icon == "mdi:water-auto"
+
+
+# ===========================================================================
+# entity_registry_enabled_default is None (base.py line 78)
+# ===========================================================================
+
+
+class TestBaseEntityRegistryEnabledDefault:
+    def test_none_enabled_default_calls_entity_visible(self):
+        """When entity_registry_enabled_default is None, coordinator.entity_visible is called."""
+        coord = _mock_coordinator()
+        coord.entity_visible.return_value = False
+        desc = LuxtronikSensorDescription(
+            key=SensorKey.FLOW_OUT_TEMPERATURE,
+            luxtronik_key=LC.C0011_FLOW_OUT_TEMPERATURE,
+            device_key=DeviceKey.heatpump,
+            entity_registry_enabled_default=None,  # triggers the branch
+        )
+        entity = LuxtronikSensorEntity(
+            MagicMock(), _mock_entry(), coord, desc, DeviceKey.heatpump
+        )
+        _patch_entity(entity)
+        assert entity.entity_description.entity_registry_enabled_default is False
+        coord.entity_visible.assert_called()
+
+
+# ===========================================================================
+# StrEnum / None / else branches in __init__ loop (base.py lines 103, 109)
+# ===========================================================================
+
+
+class TestBaseExtraKeyLoop:
+    def test_strenum_value_in_extra_attrs(self):
+        """StrEnum value is formatted as 'name[1:5] value'."""
+        desc = LuxtronikClimateDescription(
+            key=SensorKey.HEATING,
+            luxtronik_key=LP.P0003_MODE_HEATING,
+            device_key=DeviceKey.heating,
+            luxtronik_key_current_temperature=LC.C0227_ROOM_THERMOSTAT_TEMPERATURE,
+            luxtronik_key_current_action=LC.C0080_STATUS,
+        )
+        coord = _mock_coordinator()
+        entity = LuxtronikEntity(coord, desc, DeviceKey.heating)
+        _patch_entity(entity)
+        assert (
+            "luxtronik_key_current_temperature" in entity._attr_extra_state_attributes
+        )
+        val = entity._attr_extra_state_attributes["luxtronik_key_current_temperature"]
+        assert isinstance(val, str)
+        assert LC.C0227_ROOM_THERMOSTAT_TEMPERATURE.value in val
+
+    def test_non_strenum_value_in_extra_attrs(self):
+        """Non-StrEnum value is stored directly."""
+        desc = LuxtronikClimateDescription(
+            key=SensorKey.HEATING,
+            luxtronik_key=LP.P0003_MODE_HEATING,
+            device_key=DeviceKey.heating,
+            luxtronik_key_current_temperature="sensor.my_temp",  # string, not StrEnum
+            luxtronik_key_current_action=LC.C0080_STATUS,
+        )
+        coord = _mock_coordinator()
+        entity = LuxtronikEntity(coord, desc, DeviceKey.heating)
+        _patch_entity(entity)
+        assert (
+            entity._attr_extra_state_attributes["luxtronik_key_current_temperature"]
+            == "sensor.my_temp"
+        )
+
+    def test_none_value_skipped_in_extra_attrs(self):
+        """When a luxtronik_key_* field is None, it's skipped."""
+        desc = LuxtronikIndexSensorDescription(
+            key=SensorKey.FLOW_OUT_TEMPERATURE,
+            luxtronik_key=LC.C0011_FLOW_OUT_TEMPERATURE,
+            device_key=DeviceKey.heatpump,
+            luxtronik_key_timestamp=None,  # pyright: ignore[reportArgumentType]
+        )
+        coord = _mock_coordinator()
+        entity = LuxtronikEntity(coord, desc, DeviceKey.heatpump)
+        _patch_entity(entity)
+        assert "luxtronik_key_timestamp" not in entity._attr_extra_state_attributes
+
+
+# ===========================================================================
+# _restore_attr_value (base.py line 162), _data_update (base.py line 171)
+# ===========================================================================
+
+
+class TestBaseHelperMethods:
+    def test_restore_attr_value_passthrough(self):
+        desc = LuxtronikSensorDescription(
+            key=SensorKey.FLOW_OUT_TEMPERATURE,
+            luxtronik_key=LC.C0011_FLOW_OUT_TEMPERATURE,
+            device_key=DeviceKey.heatpump,
+        )
+        coord = _mock_coordinator()
+        entity = LuxtronikEntity(coord, desc, DeviceKey.heatpump)
+        _patch_entity(entity)
+        assert entity._restore_attr_value(42) == 42
+        assert entity._restore_attr_value(None) is None
+
+    @pytest.mark.asyncio
+    async def test_data_update_calls_handle(self):
+        desc = LuxtronikSensorDescription(
+            key=SensorKey.FLOW_OUT_TEMPERATURE,
+            luxtronik_key=LC.C0011_FLOW_OUT_TEMPERATURE,
+            device_key=DeviceKey.heatpump,
+        )
+        coord = _mock_coordinator()
+        entity = LuxtronikEntity(coord, desc, DeviceKey.heatpump)
+        _patch_entity(entity)
+        with patch.object(entity, "_handle_coordinator_update") as mock_handle:
+            await entity._data_update(MagicMock())
+            mock_handle.assert_called_once()
+
+
+# ===========================================================================
+# _enrich_extra_attributes (base.py lines 227-231)
+# ===========================================================================
+
+
+class TestBaseEnrichExtraAttributes:
+    def test_skips_attr_with_no_format_and_unset_key(self):
+        desc = LuxtronikSensorDescription(
+            key=SensorKey.FLOW_OUT_TEMPERATURE,
+            luxtronik_key=LC.C0011_FLOW_OUT_TEMPERATURE,
+            device_key=DeviceKey.heatpump,
+            extra_attributes=(
+                LuxtronikEntityAttributeDescription(
+                    key=SA.TIMER_HEATPUMP_ON,
+                    luxtronik_key=LP.UNSET,
+                    format=None,
+                ),
+            ),
+        )
+        coord = _mock_coordinator()
+        entity = LuxtronikEntity(coord, desc, DeviceKey.heatpump)
+        _patch_entity(entity)
+        entity._enrich_extra_attributes()
+        assert SA.TIMER_HEATPUMP_ON.value not in entity._attr_extra_state_attributes
+
+    def test_includes_attr_with_format(self):
+        data = make_coordinator_data(calculations={"ID_WEB_Temperatur_TRL": 7200})
+        desc = LuxtronikSensorDescription(
+            key=SensorKey.FLOW_OUT_TEMPERATURE,
+            luxtronik_key=LC.C0011_FLOW_OUT_TEMPERATURE,
+            device_key=DeviceKey.heatpump,
+            extra_attributes=(
+                LuxtronikEntityAttributeDescription(
+                    key=SA.TIMER_HEATPUMP_ON,
+                    luxtronik_key=LC.C0011_FLOW_OUT_TEMPERATURE,
+                    format=SensorAttrFormat.HOUR_MINUTE,
+                ),
+            ),
+        )
+        coord = _mock_coordinator(data)
+        entity = LuxtronikSensorEntity(
+            MagicMock(), _mock_entry(), coord, desc, DeviceKey.heatpump
+        )
+        _patch_entity(entity)
+        entity._enrich_extra_attributes()
+        assert SA.TIMER_HEATPUMP_ON.value in entity._attr_extra_state_attributes
+
+
+# ===========================================================================
+# _schedule_immediate_update (base.py line 239)
+# ===========================================================================
+
+
+class TestBaseScheduleImmediateUpdate:
+    def test_schedule_immediate_update(self):
+        desc = LuxtronikSensorDescription(
+            key=SensorKey.FLOW_OUT_TEMPERATURE,
+            luxtronik_key=LC.C0011_FLOW_OUT_TEMPERATURE,
+            device_key=DeviceKey.heatpump,
+        )
+        coord = _mock_coordinator()
+        entity = LuxtronikEntity(coord, desc, DeviceKey.heatpump)
+        _patch_entity(entity)
+        entity._schedule_immediate_update()
+        entity.async_schedule_update_ha_state.assert_called_once_with(True)
+
+
+# ===========================================================================
+# return str(value) fallback (base.py line 274)
+# ===========================================================================
+
+
+class TestBaseFormattedDataFallback:
+    def test_unknown_format_returns_str(self):
+        """When format doesn't match any known case, return str(value)."""
+        data = make_coordinator_data(calculations={"ID_WEB_Temperatur_TRL": 42})
+        desc = LuxtronikSensorDescription(
+            key=SensorKey.FLOW_OUT_TEMPERATURE,
+            luxtronik_key=LC.C0011_FLOW_OUT_TEMPERATURE,
+            device_key=DeviceKey.heatpump,
+        )
+        coord = _mock_coordinator(data)
+        entity = LuxtronikSensorEntity(
+            MagicMock(), _mock_entry(), coord, desc, DeviceKey.heatpump
+        )
+        _patch_entity(entity)
+        attr = LuxtronikEntityAttributeDescription(
+            key=SA.TIMER_HEATPUMP_ON,
+            luxtronik_key=LC.C0011_FLOW_OUT_TEMPERATURE,
+            format=SensorAttrFormat.TIMESTAMP_LAST_OVER,
+        )
+        result = entity.formatted_data(attr)
+        assert result == "42"

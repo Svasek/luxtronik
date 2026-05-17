@@ -227,8 +227,7 @@ class TestDiscover:
         mock_sock.recvfrom = recv_side_effect
 
         results = discover()
-        # Results depend on the mock behavior
-        assert isinstance(results, list)
+        assert ("192.168.1.100", 8889) in results
 
     @patch("custom_components.luxtronik2.lux_helper.socket.socket")
     def test_discover_timeout_no_results(self, mock_socket_class):
@@ -238,6 +237,68 @@ class TestDiscover:
 
         results = discover()
         assert results == []
+
+    @patch("custom_components.luxtronik2.lux_helper.socket")
+    def test_discovery_valid_port(self, mock_socket_module):
+        sock_instance = MagicMock()
+        mock_socket_module.socket.return_value = sock_instance
+        mock_socket_module.AF_INET = 2
+        mock_socket_module.SOCK_DGRAM = 2
+        mock_socket_module.IPPROTO_UDP = 17
+        mock_socket_module.SOL_SOCKET = 1
+        mock_socket_module.SO_BROADCAST = 6
+
+        magic_packet = "2000;111;1;\x00"
+        valid_response = f"{LUXTRONIK_DISCOVERY_RESPONSE_PREFIX}8888;"
+        sock_instance.recvfrom.side_effect = [
+            (magic_packet.encode(), ("192.168.1.1", 4444)),
+            (valid_response.encode(), ("192.168.1.200", 4444)),
+            TimeoutError(),
+            TimeoutError(),  # second port
+        ]
+
+        results = discover()
+        assert ("192.168.1.200", 8888) in results
+
+    @patch("custom_components.luxtronik2.lux_helper.socket")
+    def test_discovery_invalid_port(self, mock_socket_module):
+        sock_instance = MagicMock()
+        mock_socket_module.socket.return_value = sock_instance
+        mock_socket_module.AF_INET = 2
+        mock_socket_module.SOCK_DGRAM = 2
+        mock_socket_module.IPPROTO_UDP = 17
+        mock_socket_module.SOL_SOCKET = 1
+        mock_socket_module.SO_BROADCAST = 6
+
+        valid_response = f"{LUXTRONIK_DISCOVERY_RESPONSE_PREFIX}not_a_port;"
+        sock_instance.recvfrom.side_effect = [
+            (valid_response.encode(), ("192.168.1.200", 4444)),
+            TimeoutError(),
+            TimeoutError(),
+        ]
+
+        results = discover()
+        assert len([r for r in results if r[0] == "192.168.1.200"]) == 0
+
+    @patch("custom_components.luxtronik2.lux_helper.socket")
+    def test_discovery_invalid_response_prefix(self, mock_socket_module):
+        sock_instance = MagicMock()
+        mock_socket_module.socket.return_value = sock_instance
+        mock_socket_module.AF_INET = 2
+        mock_socket_module.SOCK_DGRAM = 2
+        mock_socket_module.IPPROTO_UDP = 17
+        mock_socket_module.SOL_SOCKET = 1
+        mock_socket_module.SO_BROADCAST = 6
+
+        invalid_response = "9999;222;garbage;"
+        sock_instance.recvfrom.side_effect = [
+            (invalid_response.encode(), ("192.168.1.200", 4444)),
+            TimeoutError(),
+            TimeoutError(),
+        ]
+
+        results = discover()
+        assert ("192.168.1.200", None) not in results
 
 
 # ===========================================================================
@@ -285,6 +346,34 @@ class TestIsSocketClosed:
         sock.fileno.return_value = 3
         sock.recv.side_effect = OSError(99, "other")
         assert _is_socket_closed(sock) is False
+
+    def test_generic_exception_returns_false(self):
+        sock = MagicMock()
+        sock.fileno.return_value = 3
+        sock.gettimeout.return_value = 5.0
+        sock.recv.side_effect = RuntimeError("unexpected")
+        result = _is_socket_closed(sock)
+        assert result is False
+        sock.settimeout.assert_called_with(5.0)
+
+    def test_timeout_restored_after_blocking_io_error(self):
+        sock = MagicMock()
+        sock.fileno.return_value = 3
+        sock.gettimeout.return_value = 10.0
+        sock.recv.side_effect = BlockingIOError()
+        result = _is_socket_closed(sock)
+        assert result is False
+        sock.settimeout.assert_called_with(10.0)
+
+    def test_recv_returns_data_means_open(self):
+        """When recv returns non-empty data, socket is open (return False after finally)."""
+        sock = MagicMock()
+        sock.fileno.return_value = 3
+        sock.gettimeout.return_value = 5.0
+        sock.recv.return_value = b"\x01\x02"
+        result = _is_socket_closed(sock)
+        assert result is False
+        sock.settimeout.assert_called_with(5.0)
 
 
 # ===========================================================================

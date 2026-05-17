@@ -17,7 +17,9 @@ from custom_components.luxtronik2.const import (
     CONF_HA_SENSOR_PREFIX,
     CONF_MAX_DATA_LENGTH,
     DEFAULT_MAX_DATA_LENGTH,
+    DEFAULT_PORT,
     DEFAULT_TIMEOUT,
+    DOMAIN,
 )
 from custom_components.luxtronik2.coordinator import LuxtronikConnectionError
 
@@ -503,3 +505,43 @@ class TestOptionsFlow:
         flow.async_show_form = MagicMock(side_effect=Exception("unexpected"))
         await flow.async_step_user(None)
         flow.async_abort.assert_called_with(reason="options_error")
+
+
+# ===========================================================================
+# config_flow.py — indoor_temp None reset (line 432)
+# ===========================================================================
+
+_ENTRY_DATA = {
+    CONF_HOST: "192.168.1.100",
+    CONF_PORT: DEFAULT_PORT,
+    CONF_TIMEOUT: DEFAULT_TIMEOUT,
+    CONF_MAX_DATA_LENGTH: DEFAULT_MAX_DATA_LENGTH,
+    CONF_HA_SENSOR_PREFIX: DOMAIN,
+}
+
+
+class TestConfigFlowIndoorTempReset:
+    @pytest.mark.asyncio
+    async def test_indoor_temp_reset_to_none(self):
+        handler = MagicMock(spec=LuxtronikOptionsFlowHandler)
+        handler.options = {CONF_HA_SENSOR_INDOOR_TEMPERATURE: "sensor.old"}
+        handler.config_entry = MagicMock()
+        handler.config_entry.data = _ENTRY_DATA.copy()
+        handler.config_entry.entry_id = "test_id"
+        handler.hass = MagicMock()
+        handler.hass.config_entries.async_reload = AsyncMock()
+
+        user_input = {CONF_HOST: "192.168.1.100", CONF_PORT: DEFAULT_PORT}
+
+        with patch(
+            "custom_components.luxtronik2.config_flow.connect_and_get_coordinator",
+            new_callable=AsyncMock,
+        ):
+            await LuxtronikOptionsFlowHandler.async_step_user(handler, user_input)
+
+        handler.hass.config_entries.async_update_entry.assert_called_once()
+        call_kwargs = handler.hass.config_entries.async_update_entry.call_args
+        updated_options = call_kwargs.kwargs.get(
+            "options", call_kwargs[1].get("options", {})
+        )
+        assert updated_options.get(CONF_HA_SENSOR_INDOOR_TEMPERATURE) is None

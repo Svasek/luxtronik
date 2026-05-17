@@ -171,3 +171,40 @@ class TestShouldUseFirstSlot:
         tracker._evu_first_start = time(8, 0)
         tracker._evu_first_end = time(10, 0)
         assert tracker._should_use_first_slot(time(14, 0)) is False
+
+
+# ===========================================================================
+# evu_helper.py — multi-day gap (line 75) and else branch (lines 76-79)
+# ===========================================================================
+
+
+class TestEVUHelperMultiDayGap:
+    @patch("custom_components.luxtronik2.evu_helper.dt_util")
+    def test_multi_day_gap_adds_1440(self, mock_dt):
+        from datetime import datetime
+
+        # Current time: Wednesday 10:00
+        mock_dt.now.return_value = datetime(2024, 1, 3, 10, 0)  # Wednesday=2
+
+        tracker = LuxtronikEVUTracker()
+        tracker._evu_first_start = time(8, 0)
+        tracker._evu_days = [5]  # Only Friday has EVU events
+
+        minutes = tracker.get_next_event_minutes()
+        assert minutes is not None
+        assert minutes > 1440  # At least one full day skipped
+
+    @patch("custom_components.luxtronik2.evu_helper.dt_util")
+    def test_weekday_in_evu_days_returns_minutes(self, mock_dt):
+        from datetime import datetime
+
+        # Current time: Monday 10:00
+        mock_dt.now.return_value = datetime(2024, 1, 1, 10, 0)  # Monday=0
+
+        tracker = LuxtronikEVUTracker()
+        tracker._evu_first_start = time(12, 0)
+        tracker._evu_days = [0]  # Monday is in evu_days
+
+        minutes = tracker.get_next_event_minutes()
+        assert minutes is not None
+        assert minutes == 120  # 12:00 - 10:00 = 120 min

@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from dataclasses import replace as dc_replace
+from unittest.mock import MagicMock, patch
+
+from conftest import make_coordinator_data
 from homeassistant.components.climate import (
     PRESET_AWAY,
     PRESET_BOOST,
@@ -10,6 +14,8 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
+from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TIMEOUT
+import pytest
 
 from custom_components.luxtronik2.climate import (
     HVAC_ACTION_MAPPING_COOL,
@@ -21,8 +27,16 @@ from custom_components.luxtronik2.climate import (
     MIN_TEMPERATURE,
     THERMOSTATS,
     LuxtronikClimateExtraStoredData,
+    LuxtronikThermostat,
 )
 from custom_components.luxtronik2.const import (
+    CONF_HA_SENSOR_INDOOR_TEMPERATURE,
+    CONF_HA_SENSOR_PREFIX,
+    CONF_MAX_DATA_LENGTH,
+    DEFAULT_MAX_DATA_LENGTH,
+    DEFAULT_PORT,
+    DEFAULT_TIMEOUT,
+    DOMAIN,
     DeviceKey,
     LuxMode,
     LuxOperationMode,
@@ -127,3 +141,155 @@ class TestClimateExtraStoredData:
         assert d["_attr_target_temperature"] is None
         assert d["_attr_hvac_mode"] is None
         assert d["last_hvac_mode_before_preset"] is None
+
+
+# ===========================================================================
+# Helpers for climate entity tests
+# ===========================================================================
+
+_ENTRY_DATA = {
+    CONF_HOST: "192.168.1.100",
+    CONF_PORT: DEFAULT_PORT,
+    CONF_TIMEOUT: DEFAULT_TIMEOUT,
+    CONF_MAX_DATA_LENGTH: DEFAULT_MAX_DATA_LENGTH,
+    CONF_HA_SENSOR_PREFIX: DOMAIN,
+}
+
+
+def _mock_entry(**overrides):
+    entry = MagicMock()
+    data = _ENTRY_DATA.copy()
+    data.update(overrides)
+    entry.data = data
+    entry.options = {}
+    return entry
+
+
+def _mock_coordinator(data=None):
+    if data is None:
+        data = make_coordinator_data()
+    coord = MagicMock()
+    coord.data = data
+    coord.entity_active.return_value = True
+    coord.entity_visible.return_value = True
+    coord.get_device.return_value = MagicMock()
+    return coord
+
+
+def _patch_entity(entity):
+    entity.hass = MagicMock()
+    entity.hass.config.time_zone = "UTC"
+    entity.async_write_ha_state = MagicMock()
+    entity.async_schedule_update_ha_state = MagicMock()
+
+
+# ===========================================================================
+# climate.py — unavailable_keys log (line 193)
+# ===========================================================================
+
+
+class TestClimateUnavailableKeys:
+    @pytest.mark.asyncio
+    async def test_unavailable_keys_logged(self):
+        """When a thermostat key is missing from data, it's logged."""
+        from custom_components.luxtronik2.climate import async_setup_entry
+
+        coord = _mock_coordinator(make_coordinator_data())
+        entry = MagicMock()
+        entry.runtime_data = coord
+
+        added = []
+        with (
+            patch(
+                "custom_components.luxtronik2.climate.key_exists", return_value=False
+            ),
+            patch("custom_components.luxtronik2.climate.LOGGER") as mock_logger,
+        ):
+            await async_setup_entry(
+                MagicMock(), entry, lambda entities, update: added.extend(entities)
+            )
+            mock_logger.debug.assert_called()
+
+
+# ===========================================================================
+# climate.py — configured_indoor_temp_sensor (lines 267-271)
+# ===========================================================================
+
+
+class TestClimateConfiguredIndoorTempSensor:
+    def test_configured_sensor_replaces_key(self):
+        coord = _mock_coordinator()
+        entry = _mock_entry()
+        entry.options = {CONF_HA_SENSOR_INDOOR_TEMPERATURE: "sensor.my_temp"}
+        hass = MagicMock()
+
+        thermostat = LuxtronikThermostat(hass, entry, coord, THERMOSTATS[0])
+        assert (
+            thermostat.entity_description.luxtronik_key_current_temperature
+            == "sensor.my_temp"
+        )
+
+
+# ===========================================================================
+# climate.py — key None/empty and sensor.* branches (lines 337, 339-340)
+# ===========================================================================
+
+
+class TestClimateTemperatureKeyBranches:
+    def test_key_none_sets_current_temp_none(self):
+        coord = _mock_coordinator()
+        entry = _mock_entry()
+        hass = MagicMock()
+
+        thermostat = LuxtronikThermostat(hass, entry, coord, THERMOSTATS[0])
+        _patch_entity(thermostat)
+        thermostat.entity_description = dc_replace(
+            thermostat.entity_description,
+            luxtronik_key_current_temperature=None,
+        )
+        data = make_coordinator_data(
+            parameters={"ID_Ba_Hz_akt": LuxMode.automatic},
+            calculations={"ID_WEB_WP_BZ_akt": LuxOperationMode.heating},
+        )
+        thermostat._handle_coordinator_update(data)
+        assert thermostat._attr_current_temperature is None
+
+    def test_key_empty_sets_current_temp_none(self):
+        coord = _mock_coordinator()
+        entry = _mock_entry()
+        hass = MagicMock()
+
+        thermostat = LuxtronikThermostat(hass, entry, coord, THERMOSTATS[0])
+        _patch_entity(thermostat)
+        thermostat.entity_description = dc_replace(
+            thermostat.entity_description,
+            luxtronik_key_current_temperature="",
+        )
+        data = make_coordinator_data(
+            parameters={"ID_Ba_Hz_akt": LuxMode.automatic},
+            calculations={"ID_WEB_WP_BZ_akt": LuxOperationMode.heating},
+        )
+        thermostat._handle_coordinator_update(data)
+        assert thermostat._attr_current_temperature is None
+
+    def test_key_sensor_reads_from_hass_states(self):
+        coord = _mock_coordinator()
+        entry = _mock_entry()
+        hass = MagicMock()
+
+        thermostat = LuxtronikThermostat(hass, entry, coord, THERMOSTATS[0])
+        _patch_entity(thermostat)
+        thermostat.entity_description = dc_replace(
+            thermostat.entity_description,
+            luxtronik_key_current_temperature="sensor.living_room_temp",
+        )
+        mock_state = MagicMock()
+        mock_state.state = "21.5"
+        thermostat.hass.states.get.return_value = mock_state
+        data = make_coordinator_data(
+            parameters={"ID_Ba_Hz_akt": LuxMode.automatic},
+            calculations={"ID_WEB_WP_BZ_akt": LuxOperationMode.heating},
+        )
+        thermostat._handle_coordinator_update(data)
+        thermostat.hass.states.get.assert_called_with("sensor.living_room_temp")
+        assert thermostat._attr_current_temperature == 21.5

@@ -528,3 +528,34 @@ class TestIndexSensor:
         result = entity.format_time(1700000000)
         assert isinstance(result, datetime)
         assert result.tzinfo == UTC
+
+
+# ===========================================================================
+# sensor.py — icon fallback in smart grid (line 391)
+# ===========================================================================
+
+
+class TestSensorSmartGridIconFallback:
+    def test_icon_fallback_when_no_icon_by_state_match(self):
+        data = make_coordinator_data(
+            parameters={"ID_Einst_SmartGrid": 1},
+            calculations={
+                "ID_WEB_EVU": 0,
+                "ID_WEB_EVU2": 1,
+            },
+        )
+        desc = LuxtronikSensorDescription(
+            key=SensorKey.SMART_GRID_STATUS,
+            luxtronik_key=LC.UNSET,
+            device_key=DeviceKey.heatpump,
+            icon="mdi:grid",
+            icon_by_state={"nonexistent_state": "mdi:other"},  # no match for "normal"
+        )
+        coord = _mock_coordinator(data)
+        entry = _mock_entry()
+        entity = LuxtronikStatusSensorEntity(
+            MagicMock(), entry, coord, desc, DeviceKey.heatpump
+        )
+        _patch_entity(entity)
+        entity._handle_coordinator_update(data)
+        assert entity._attr_icon == "mdi:grid"

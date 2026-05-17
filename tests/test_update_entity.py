@@ -123,3 +123,92 @@ def test_release_notes_returns_html():
     assert result is not None
     assert "V3.91.0" in result
     assert "Bug fixes" in result
+
+
+# ===========================================================================
+# update.py — update_available, manual_url (lines 113-115)
+# ===========================================================================
+
+
+def _make_full_update_entity():
+    """Create a real LuxtronikUpdateEntity for integration-level tests."""
+    from conftest import make_coordinator_data
+    from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TIMEOUT
+
+    from custom_components.luxtronik2.const import (
+        CONF_HA_SENSOR_PREFIX,
+        CONF_MAX_DATA_LENGTH,
+        DEFAULT_MAX_DATA_LENGTH,
+        DEFAULT_PORT,
+        DEFAULT_TIMEOUT,
+        DOMAIN,
+        DeviceKey,
+        LuxCalculation as LC,
+        SensorKey,
+    )
+    from custom_components.luxtronik2.model import LuxtronikUpdateEntityDescription
+    from custom_components.luxtronik2.update import LuxtronikUpdateEntity
+
+    desc = LuxtronikUpdateEntityDescription(
+        key=SensorKey.FIRMWARE,
+        luxtronik_key=LC.C0081_FIRMWARE_VERSION,
+        device_key=DeviceKey.heatpump,
+    )
+    data = make_coordinator_data()
+    coord = MagicMock()
+    coord.data = data
+    coord.entity_active.return_value = True
+    coord.entity_visible.return_value = True
+    coord.get_device.return_value = MagicMock()
+    coord.model = "LW"
+    coord.manufacturer = "Alpha Innotec"
+    entry = MagicMock()
+    entry.data = {
+        CONF_HOST: "192.168.1.100",
+        CONF_PORT: DEFAULT_PORT,
+        CONF_TIMEOUT: DEFAULT_TIMEOUT,
+        CONF_MAX_DATA_LENGTH: DEFAULT_MAX_DATA_LENGTH,
+        CONF_HA_SENSOR_PREFIX: DOMAIN,
+    }
+    entity = LuxtronikUpdateEntity(entry, coord, desc)
+    entity.hass = MagicMock()
+    entity.hass.config.time_zone = "UTC"
+    entity.async_write_ha_state = MagicMock()
+    entity.async_schedule_update_ha_state = MagicMock()
+    return entity
+
+
+def test_update_available_true():
+    entity = _make_full_update_entity()
+    entity._LuxtronikUpdateEntity__firmware_version_available = "V3.91.0"
+    entity._attr_state = "V3.90.1"
+    assert entity.update_available is True
+
+
+def test_update_available_false_no_latest():
+    entity = _make_full_update_entity()
+    entity._LuxtronikUpdateEntity__firmware_version_available = None
+    entity._attr_state = "V3.90.1"
+    assert entity.update_available is False
+
+
+def test_manual_url_german():
+    from custom_components.luxtronik2.update import FIRMWARE_UPDATE_MANUAL_DE, LANG_DE
+
+    entity = _make_full_update_entity()
+    entity._LuxtronikUpdateEntity__firmware_version_available = "V3.91.0"
+    entity._attr_state = "V3.90.1"
+    entity.hass.config.language = LANG_DE
+    notes = entity.release_notes()
+    assert FIRMWARE_UPDATE_MANUAL_DE in notes
+
+
+def test_manual_url_english():
+    from custom_components.luxtronik2.update import FIRMWARE_UPDATE_MANUAL_EN
+
+    entity = _make_full_update_entity()
+    entity._LuxtronikUpdateEntity__firmware_version_available = "V3.91.0"
+    entity._attr_state = "V3.90.1"
+    entity.hass.config.language = "en"
+    notes = entity.release_notes()
+    assert FIRMWARE_UPDATE_MANUAL_EN in notes
