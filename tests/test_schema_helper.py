@@ -1,22 +1,18 @@
-"""Tests for custom_components.luxtronik.schema_helper."""
+"""Tests for custom_components.luxtronik2.schema_helper."""
 
 from __future__ import annotations
 
+from homeassistant.const import CONF_HOST, CONF_PORT
+import pytest
 import voluptuous as vol
 
-from custom_components.luxtronik.schema_helper import (
+from custom_components.luxtronik2.const import (
+    DEFAULT_PORT,
+)
+from custom_components.luxtronik2.schema_helper import (
     build_options_schema,
     build_user_data_schema,
 )
-from custom_components.luxtronik.const import (
-    CONF_HA_SENSOR_INDOOR_TEMPERATURE,
-    CONF_MAX_DATA_LENGTH,
-    DEFAULT_HOST,
-    DEFAULT_MAX_DATA_LENGTH,
-    DEFAULT_PORT,
-    DEFAULT_TIMEOUT,
-)
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TIMEOUT
 
 
 class TestBuildUserDataSchema:
@@ -38,11 +34,11 @@ class TestBuildUserDataSchema:
         result = schema(
             {
                 CONF_HOST: "192.168.1.100",
-                CONF_PORT: 8889,
+                CONF_PORT: DEFAULT_PORT,
             }
         )
         assert result[CONF_HOST] == "192.168.1.100"
-        assert result[CONF_PORT] == 8889
+        assert result[CONF_PORT] == DEFAULT_PORT
 
     def test_schema_uses_defaults(self):
         schema = build_user_data_schema()
@@ -69,6 +65,3 @@ class TestBuildOptionsSchema:
             current_value="sensor.indoor_temp",
         )
         assert isinstance(schema, vol.Schema)
-
-
-import pytest

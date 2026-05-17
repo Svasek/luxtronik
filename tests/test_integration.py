@@ -4,40 +4,38 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
+from conftest import make_coordinator_data
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TIMEOUT
 from homeassistant.exceptions import ConfigEntryNotReady, ServiceValidationError
+import pytest
 
-from custom_components.luxtronik import (
+from custom_components.luxtronik2 import (
     async_setup_entry,
     async_unload_entry,
     setup_hass_services,
 )
-from custom_components.luxtronik.const import (
+from custom_components.luxtronik2.const import (
     ATTR_PARAMETER,
     ATTR_VALUE,
     CONF_HA_SENSOR_PREFIX,
     CONF_MAX_DATA_LENGTH,
-    CONFIG_ENTRY_VERSION,
     DEFAULT_MAX_DATA_LENGTH,
+    DEFAULT_PORT,
     DEFAULT_TIMEOUT,
     DOMAIN,
     PLATFORMS,
     SERVICE_WRITE,
 )
 
-from conftest import make_coordinator_data
-
 
 def _mock_entry():
     entry = MagicMock()
     entry.data = {
         CONF_HOST: "192.168.1.100",
-        CONF_PORT: 8889,
+        CONF_PORT: DEFAULT_PORT,
         CONF_TIMEOUT: DEFAULT_TIMEOUT,
         CONF_MAX_DATA_LENGTH: DEFAULT_MAX_DATA_LENGTH,
-        CONF_HA_SENSOR_PREFIX: "luxtronik2",
+        CONF_HA_SENSOR_PREFIX: DOMAIN,
     }
     entry.options = {}
     entry.entry_id = "test_entry_id"
@@ -69,7 +67,7 @@ class TestAsyncSetupEntry:
         coord = _mock_coordinator(hass)
 
         with patch(
-            "custom_components.luxtronik.connect_and_get_coordinator",
+            "custom_components.luxtronik2.connect_and_get_coordinator",
             return_value=coord,
         ):
             result = await async_setup_entry(hass, entry)
@@ -85,12 +83,14 @@ class TestAsyncSetupEntry:
         hass = MagicMock()
         entry = _mock_entry()
 
-        with patch(
-            "custom_components.luxtronik.connect_and_get_coordinator",
-            side_effect=ConnectionRefusedError("refused"),
+        with (
+            patch(
+                "custom_components.luxtronik2.connect_and_get_coordinator",
+                side_effect=ConnectionRefusedError("refused"),
+            ),
+            pytest.raises(ConfigEntryNotReady),
         ):
-            with pytest.raises(ConfigEntryNotReady):
-                await async_setup_entry(hass, entry)
+            await async_setup_entry(hass, entry)
 
     @pytest.mark.asyncio
     async def test_title_without_manufacturer(self):
@@ -103,7 +103,7 @@ class TestAsyncSetupEntry:
         coord.manufacturer = None
 
         with patch(
-            "custom_components.luxtronik.connect_and_get_coordinator",
+            "custom_components.luxtronik2.connect_and_get_coordinator",
             return_value=coord,
         ):
             await async_setup_entry(hass, entry)

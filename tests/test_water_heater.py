@@ -1,4 +1,4 @@
-"""Tests for custom_components.luxtronik.water_heater constants and mappings."""
+"""Tests for custom_components.luxtronik2.water_heater constants and mappings."""
 
 from __future__ import annotations
 
@@ -9,12 +9,12 @@ from homeassistant.components.water_heater import (
 )
 from homeassistant.const import STATE_OFF
 
-from custom_components.luxtronik.const import (
+from custom_components.luxtronik2.const import (
     DeviceKey,
     LuxMode,
     LuxOperationMode,
 )
-from custom_components.luxtronik.water_heater import (
+from custom_components.luxtronik2.water_heater import (
     OPERATION_MAPPING,
     WATER_HEATERS,
 )

@@ -1,21 +1,18 @@
-"""Tests for custom_components.luxtronik.model."""
+"""Tests for custom_components.luxtronik2.model."""
 
 from __future__ import annotations
 
-from datetime import timedelta
-
+from conftest import make_coordinator_data
 from homeassistant.const import Platform
 
-from custom_components.luxtronik.const import (
+from custom_components.luxtronik2.const import (
     DeviceKey,
-    LuxCalculation,
     LuxParameter,
     LuxVisibility,
 )
-from custom_components.luxtronik.model import (
+from custom_components.luxtronik2.model import (
     LuxtronikBinarySensorEntityDescription,
     LuxtronikClimateDescription,
-    LuxtronikCoordinatorData,
     LuxtronikDateEntityDescription,
     LuxtronikEntityAttributeDescription,
     LuxtronikEntityDescription,
@@ -25,8 +22,6 @@ from custom_components.luxtronik.model import (
     LuxtronikUpdateEntityDescription,
     LuxtronikWaterHeaterDescription,
 )
-
-from conftest import make_coordinator_data
 
 
 class TestLuxtronikCoordinatorData:
@@ -139,19 +134,19 @@ class TestLuxtronikWaterHeaterDescription:
 
 class TestLuxtronikUpdateEntityDescription:
     def test_defaults(self):
-        desc = LuxtronikUpdateEntityDescription(key="update_test")
+        LuxtronikUpdateEntityDescription(key="update_test")
         assert LuxtronikUpdateEntityDescription.platform == Platform.UPDATE
 
 
 class TestLuxtronikDateEntityDescription:
     def test_defaults(self):
-        desc = LuxtronikDateEntityDescription(key="date_test")
+        LuxtronikDateEntityDescription(key="date_test")
         assert LuxtronikDateEntityDescription.platform == Platform.DATE
 
 
 class TestLuxtronikEntityAttributeDescription:
     def test_defaults(self):
-        from custom_components.luxtronik.const import SensorAttrKey
+        from custom_components.luxtronik2.const import SensorAttrKey
 
         desc = LuxtronikEntityAttributeDescription(
             key=SensorAttrKey.LUXTRONIK_KEY,

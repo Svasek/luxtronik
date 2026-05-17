@@ -1,24 +1,6 @@
-"""Tests for custom_components.luxtronik.__init__ (service registration and helpers)."""
+"""Tests for custom_components.luxtronik2.__init__ (service registration and helpers)."""
 
 from __future__ import annotations
-
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
-
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.exceptions import ServiceValidationError
-
-from custom_components.luxtronik.const import (
-    ATTR_PARAMETER,
-    ATTR_VALUE,
-    CONF_HA_SENSOR_PREFIX,
-    DOMAIN,
-    SERVICE_WRITE,
-)
-
 
 # ===========================================================================
 # Service write_parameter validation
@@ -84,7 +66,7 @@ class TestWriteParameterValidation:
 
 class TestConvertToIntInService:
     def test_int_conversion(self):
-        from custom_components.luxtronik.common import convert_to_int_if_possible
+        from custom_components.luxtronik2.common import convert_to_int_if_possible
 
         assert convert_to_int_if_possible("42") == 42
         assert convert_to_int_if_possible("not_a_number") == "not_a_number"

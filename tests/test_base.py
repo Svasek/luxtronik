@@ -1,33 +1,23 @@
-"""Tests for custom_components.luxtronik.base (LuxtronikEntity)."""
+"""Tests for custom_components.luxtronik2.base (LuxtronikEntity)."""
 
 from __future__ import annotations
 
-from dataclasses import replace
 from datetime import datetime, timedelta
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock
 
-import pytest
+from conftest import make_coordinator_data
 from homeassistant.const import UnitOfTemperature, UnitOfTime
 
-from custom_components.luxtronik.const import (
-    DeviceKey,
-    LuxCalculation as LC,
-    LuxMode,
-    LuxOperationMode,
+from custom_components.luxtronik2.const import (
     LuxParameter as LP,
     SensorAttrFormat,
     SensorAttrKey as SA,
 )
-from custom_components.luxtronik.model import (
+from custom_components.luxtronik2.model import (
     LuxtronikBinarySensorEntityDescription,
     LuxtronikEntityAttributeDescription,
     LuxtronikEntityDescription,
-    LuxtronikSwitchDescription,
 )
-
-from conftest import make_coordinator_data
-
 
 # ===========================================================================
 # Helpers
@@ -57,9 +47,9 @@ class TestComputeIsOn:
         self, on_state=True, on_states=None, off_state=False, inverted=False
     ):
         """Create a minimal entity with a given description for compute_is_on testing."""
-        from custom_components.luxtronik.base import LuxtronikEntity
+        from custom_components.luxtronik2.base import LuxtronikEntity
 
-        coord = _make_mock_coordinator()
+        _make_mock_coordinator()
         desc = LuxtronikBinarySensorEntityDescription(
             key="test_compute",
             on_state=on_state,
@@ -124,7 +114,7 @@ class TestFormattedData:
 
     def _make_entity_for_formatting(self, data):
         """Create a mock entity with _get_value using the given data."""
-        from custom_components.luxtronik.base import LuxtronikEntity
+        from custom_components.luxtronik2.base import LuxtronikEntity
 
         entity = MagicMock()
         entity.entity_description = LuxtronikEntityDescription(key="test")
@@ -132,7 +122,7 @@ class TestFormattedData:
         entity.hass.config.time_zone = "UTC"
 
         def get_value(key):
-            from custom_components.luxtronik.common import get_sensor_data
+            from custom_components.luxtronik2.common import get_sensor_data
 
             return get_sensor_data(data, key)
 
@@ -206,7 +196,7 @@ class TestFormattedData:
 
 class TestShouldUpdate:
     def _make_entity_with_update_interval(self, interval):
-        from custom_components.luxtronik.base import LuxtronikEntity
+        from custom_components.luxtronik2.base import LuxtronikEntity
 
         entity = MagicMock()
         entity.entity_description = MagicMock()

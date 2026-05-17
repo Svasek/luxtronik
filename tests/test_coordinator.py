@@ -1,40 +1,30 @@
-"""Tests for custom_components.luxtronik.coordinator."""
+"""Tests for custom_components.luxtronik2.coordinator."""
 
 from __future__ import annotations
 
-import asyncio
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TIMEOUT
-from homeassistant.exceptions import ConfigEntryNotReady
+from conftest import make_coordinator_data
+from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.helpers.update_coordinator import UpdateFailed
 from packaging.version import Version
+import pytest
 
-from custom_components.luxtronik.const import (
-    CONF_MAX_DATA_LENGTH,
-    DEFAULT_MAX_DATA_LENGTH,
-    DEFAULT_TIMEOUT,
-    DOMAIN,
+from custom_components.luxtronik2.const import (
+    DEFAULT_PORT,
     DeviceKey,
     LuxCalculation as LC,
-    LuxMkTypes,
     LuxParameter as LP,
     LuxVisibility as LV,
 )
-from custom_components.luxtronik.coordinator import (
+from custom_components.luxtronik2.coordinator import (
     LuxtronikConnectionError,
     LuxtronikCoordinator,
 )
-from custom_components.luxtronik.model import (
-    LuxtronikCoordinatorData,
+from custom_components.luxtronik2.model import (
     LuxtronikEntityDescription,
 )
-
-from conftest import make_coordinator_data
-
 
 # ===========================================================================
 # Helpers
@@ -66,7 +56,7 @@ def _make_coordinator(
 
     config = {
         CONF_HOST: "192.168.1.100",
-        CONF_PORT: 8889,
+        CONF_PORT: DEFAULT_PORT,
     }
 
     with patch("homeassistant.helpers.frame.report_usage"):
@@ -359,7 +349,7 @@ class TestCoordinatorAsync:
             coord = LuxtronikCoordinator(
                 hass=hass,
                 client=client,
-                config={CONF_HOST: "192.168.1.100", CONF_PORT: 8889},
+                config={CONF_HOST: "192.168.1.100", CONF_PORT: DEFAULT_PORT},
             )
 
         data = await coord._async_update_data()
@@ -376,7 +366,7 @@ class TestCoordinatorAsync:
             coord = LuxtronikCoordinator(
                 hass=hass,
                 client=client,
-                config={CONF_HOST: "192.168.1.100", CONF_PORT: 8889},
+                config={CONF_HOST: "192.168.1.100", CONF_PORT: DEFAULT_PORT},
             )
 
         with pytest.raises(UpdateFailed):
@@ -398,17 +388,6 @@ class TestCoordinatorAsync:
 # ===========================================================================
 # LuxtronikConnectionError
 # ===========================================================================
-
-
-class TestLuxtronikConnectionError:
-    def test_error_message(self):
-        err = LuxtronikConnectionError("192.168.1.100", 8889, TimeoutError("timeout"))
-        assert "192.168.1.100" in str(err)
-        assert "8889" in str(err)
-        assert "TimeoutError" in str(err)
-        assert err.host == "192.168.1.100"
-        assert err.port == 8889
-
 
 # ===========================================================================
 # _is_version_not_compatible
@@ -584,12 +563,12 @@ class TestDetectionMethods:
 class TestLuxtronikConnectionError:
     def test_message_format(self):
         orig = ConnectionRefusedError("refused")
-        err = LuxtronikConnectionError("192.168.1.100", 8889, orig)
+        err = LuxtronikConnectionError("192.168.1.100", DEFAULT_PORT, orig)
         assert "192.168.1.100" in str(err)
-        assert "8889" in str(err)
+        assert str(DEFAULT_PORT) in str(err)
         assert "ConnectionRefusedError" in str(err)
         assert err.host == "192.168.1.100"
-        assert err.port == 8889
+        assert err.port == DEFAULT_PORT
         assert err.original is orig
 
 
@@ -602,7 +581,7 @@ class TestConnectAndGetCoordinator:
     @pytest.fixture(autouse=True)
     def _reset_overrides_flag(self):
         """Reset the global _OVERRIDES_APPLIED flag before each test."""
-        import custom_components.luxtronik.coordinator as coord_mod
+        import custom_components.luxtronik2.coordinator as coord_mod
 
         coord_mod._OVERRIDES_APPLIED = False
         yield
@@ -610,39 +589,38 @@ class TestConnectAndGetCoordinator:
 
     @pytest.mark.asyncio
     async def test_connect_failure_raises_connection_error(self):
-        from custom_components.luxtronik.coordinator import connect_and_get_coordinator
+        from custom_components.luxtronik2.coordinator import connect_and_get_coordinator
 
-        config = {CONF_HOST: "192.168.1.100", CONF_PORT: 8889}
+        config = {CONF_HOST: "192.168.1.100", CONF_PORT: DEFAULT_PORT}
 
         with patch(
-            "custom_components.luxtronik.coordinator.LuxtronikCoordinator.connect",
+            "custom_components.luxtronik2.coordinator.LuxtronikCoordinator.connect",
             side_effect=ConnectionRefusedError("refused"),
         ):
             with pytest.raises(LuxtronikConnectionError) as exc_info:
                 await connect_and_get_coordinator(MagicMock(), config)
             assert exc_info.value.host == "192.168.1.100"
-            assert exc_info.value.port == 8889
+            assert exc_info.value.port == DEFAULT_PORT
 
     @pytest.mark.asyncio
     async def test_overrides_applied_once(self):
-        import custom_components.luxtronik.coordinator as coord_mod
-        from custom_components.luxtronik.coordinator import connect_and_get_coordinator
+        from custom_components.luxtronik2.coordinator import connect_and_get_coordinator
 
-        config = {CONF_HOST: "192.168.1.100", CONF_PORT: 8889}
+        config = {CONF_HOST: "192.168.1.100", CONF_PORT: DEFAULT_PORT}
 
         with (
             patch(
-                "custom_components.luxtronik.coordinator.LuxtronikCoordinator.connect",
+                "custom_components.luxtronik2.coordinator.LuxtronikCoordinator.connect",
                 side_effect=ConnectionRefusedError("refused"),
             ),
             patch(
-                "custom_components.luxtronik.coordinator.update_Luxtronik_HeatpumpCodes"
+                "custom_components.luxtronik2.coordinator.update_Luxtronik_HeatpumpCodes"
             ) as mock_hpc,
             patch(
-                "custom_components.luxtronik.coordinator.update_Luxtronik_Parameters"
+                "custom_components.luxtronik2.coordinator.update_Luxtronik_Parameters"
             ) as mock_params,
             patch(
-                "custom_components.luxtronik.coordinator.isolate_instance_data"
+                "custom_components.luxtronik2.coordinator.isolate_instance_data"
             ) as mock_iso,
         ):
             # First call applies overrides

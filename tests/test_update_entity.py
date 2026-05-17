@@ -1,11 +1,8 @@
-"""Tests for custom_components.luxtronik.update (firmware update entity)."""
+"""Tests for custom_components.luxtronik2.update (firmware update entity)."""
 
-import re
 import unittest
 
-from packaging.version import Version
-
-from custom_components.luxtronik.update import LuxtronikUpdateEntity
+from custom_components.luxtronik2.update import LuxtronikUpdateEntity
 
 
 class TestFirmwareVersionExtraction(unittest.TestCase):
@@ -92,7 +89,7 @@ class TestVersionIsNewer:
 
 class TestLatestVersion:
     def _make_entity(self):
-        from unittest.mock import MagicMock, PropertyMock
+        from unittest.mock import MagicMock
 
         entity = MagicMock(spec=LuxtronikUpdateEntity)
         entity.latest_version = LuxtronikUpdateEntity.latest_version.fget.__get__(

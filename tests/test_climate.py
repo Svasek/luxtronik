@@ -1,4 +1,4 @@
-"""Tests for custom_components.luxtronik.climate constants and mappings."""
+"""Tests for custom_components.luxtronik2.climate constants and mappings."""
 
 from __future__ import annotations
 
@@ -10,9 +10,8 @@ from homeassistant.components.climate import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import STATE_UNKNOWN
 
-from custom_components.luxtronik.climate import (
+from custom_components.luxtronik2.climate import (
     HVAC_ACTION_MAPPING_COOL,
     HVAC_ACTION_MAPPING_HEAT,
     HVAC_MODE_MAPPING_COOL,
@@ -23,7 +22,7 @@ from custom_components.luxtronik.climate import (
     THERMOSTATS,
     LuxtronikClimateExtraStoredData,
 )
-from custom_components.luxtronik.const import (
+from custom_components.luxtronik2.const import (
     DeviceKey,
     LuxMode,
     LuxOperationMode,

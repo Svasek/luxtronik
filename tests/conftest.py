@@ -2,29 +2,20 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
-from datetime import timedelta
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
-
-import pytest
 
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TIMEOUT
-from homeassistant.core import HomeAssistant
+import pytest
 
-from custom_components.luxtronik.const import (
+from custom_components.luxtronik2.const import (
     CONF_HA_SENSOR_PREFIX,
     CONF_MAX_DATA_LENGTH,
     DEFAULT_MAX_DATA_LENGTH,
+    DEFAULT_PORT,
     DEFAULT_TIMEOUT,
     DOMAIN,
-    DeviceKey,
-    LuxCalculation as LC,
-    LuxParameter as LP,
-    LuxVisibility as LV,
 )
-from custom_components.luxtronik.model import LuxtronikCoordinatorData
-
+from custom_components.luxtronik2.model import LuxtronikCoordinatorData
 
 # ---------------------------------------------------------------------------
 # Helpers for building fake luxtronik library objects
@@ -192,8 +183,8 @@ def mock_config_entry_data() -> dict[str, Any]:
     """Standard config entry data."""
     return {
         CONF_HOST: "192.168.1.100",
-        CONF_PORT: 8889,
+        CONF_PORT: DEFAULT_PORT,
         CONF_TIMEOUT: DEFAULT_TIMEOUT,
         CONF_MAX_DATA_LENGTH: DEFAULT_MAX_DATA_LENGTH,
-        CONF_HA_SENSOR_PREFIX: "luxtronik2",
+        CONF_HA_SENSOR_PREFIX: DOMAIN,
     }

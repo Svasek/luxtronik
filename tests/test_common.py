@@ -1,32 +1,25 @@
-"""Tests for custom_components.luxtronik.common."""
+"""Tests for custom_components.luxtronik2.common."""
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
+from conftest import make_coordinator_data
 import pytest
 
-from custom_components.luxtronik.common import (
+from custom_components.luxtronik2.common import (
     convert_to_int_if_possible,
     correct_key_value,
     get_sensor_data,
     key_exists,
     state_as_number_or_none,
 )
-from custom_components.luxtronik.const import (
-    CONF_CALCULATIONS,
-    CONF_PARAMETERS,
-    CONF_VISIBILITIES,
+from custom_components.luxtronik2.const import (
     LuxCalculation as LC,
     LuxOperationMode,
-    LuxParameter as LP,
     LuxStatus1Option,
     LuxStatus3Option,
-    LuxVisibility as LV,
 )
-
-from conftest import FakeSensorGroup, FakeSensorItem, make_coordinator_data
-
 
 # ===========================================================================
 # key_exists

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from custom_components.luxtronik.common import async_get_mac_address
+from custom_components.luxtronik2.common import async_get_mac_address
 
 
 class TestAsyncGetMacAddress:

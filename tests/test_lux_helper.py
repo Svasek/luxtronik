@@ -1,14 +1,14 @@
-"""Tests for custom_components.luxtronik.lux_helper."""
+"""Tests for custom_components.luxtronik2.lux_helper."""
 
 from __future__ import annotations
 
-import socket
 import struct
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from custom_components.luxtronik.lux_helper import (
+from custom_components.luxtronik2.const import DEFAULT_MAX_DATA_LENGTH, DEFAULT_PORT
+from custom_components.luxtronik2.lux_helper import (
     LUXTRONIK_DISCOVERY_MAGIC_PACKET,
     LUXTRONIK_DISCOVERY_RESPONSE_PREFIX,
     Luxtronik,
@@ -18,7 +18,6 @@ from custom_components.luxtronik.lux_helper import (
     get_manufacturer_by_model,
     get_manufacturer_firmware_url_by_model,
 )
-
 
 # ===========================================================================
 # get_manufacturer_by_model
@@ -119,57 +118,57 @@ class TestLuxtronikClient:
     def test_init(self):
         client = Luxtronik(
             host="192.168.1.100",
-            port=8889,
+            port=DEFAULT_PORT,
             socket_timeout=10.0,
-            max_data_length=10000,
+            max_data_length=DEFAULT_MAX_DATA_LENGTH,
         )
         assert client._host == "192.168.1.100"
-        assert client._port == 8889
+        assert client._port == DEFAULT_PORT
         assert client._socket_timeout == 10.0
-        assert client._max_data_length == 10000
+        assert client._max_data_length == DEFAULT_MAX_DATA_LENGTH
         assert client._socket is None
 
     def test_init_safe_mode(self):
         client = Luxtronik(
             host="localhost",
-            port=8889,
+            port=DEFAULT_PORT,
             socket_timeout=10.0,
-            max_data_length=10000,
+            max_data_length=DEFAULT_MAX_DATA_LENGTH,
             safe=True,
         )
         # safe mode should be passed through to Parameters
         assert client.parameters is not None
 
-    @patch("custom_components.luxtronik.lux_helper.socket.socket")
+    @patch("custom_components.luxtronik2.lux_helper.socket.socket")
     def test_connect_success(self, mock_socket_class):
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
 
-        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client = Luxtronik("192.168.1.100", DEFAULT_PORT, 10.0, DEFAULT_MAX_DATA_LENGTH)
         client.connect()
 
         mock_sock.settimeout.assert_called_with(10.0)
-        mock_sock.connect.assert_called_with(("192.168.1.100", 8889))
+        mock_sock.connect.assert_called_with(("192.168.1.100", DEFAULT_PORT))
 
-    @patch("custom_components.luxtronik.lux_helper.socket.socket")
+    @patch("custom_components.luxtronik2.lux_helper.socket.socket")
     def test_connect_failure(self, mock_socket_class):
         mock_sock = MagicMock()
         mock_sock.connect.side_effect = TimeoutError("timeout")
         mock_socket_class.return_value = mock_sock
 
-        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client = Luxtronik("192.168.1.100", DEFAULT_PORT, 10.0, DEFAULT_MAX_DATA_LENGTH)
         with pytest.raises(TimeoutError):
             client.connect()
 
     def test_disconnect_when_no_socket(self):
-        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client = Luxtronik("192.168.1.100", DEFAULT_PORT, 10.0, DEFAULT_MAX_DATA_LENGTH)
         client._disconnect()  # should not raise
 
     @patch(
-        "custom_components.luxtronik.lux_helper._is_socket_closed", return_value=False
+        "custom_components.luxtronik2.lux_helper._is_socket_closed", return_value=False
     )
     def test_disconnect_closes_socket(self, mock_is_closed):
-        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client = Luxtronik("192.168.1.100", DEFAULT_PORT, 10.0, DEFAULT_MAX_DATA_LENGTH)
         mock_sock = MagicMock()
         client._socket = mock_sock
 
@@ -179,10 +178,10 @@ class TestLuxtronikClient:
         assert client._socket is None
 
     @patch(
-        "custom_components.luxtronik.lux_helper._is_socket_closed", return_value=True
+        "custom_components.luxtronik2.lux_helper._is_socket_closed", return_value=True
     )
     def test_disconnect_already_closed_socket(self, mock_is_closed):
-        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client = Luxtronik("192.168.1.100", DEFAULT_PORT, 10.0, DEFAULT_MAX_DATA_LENGTH)
         mock_sock = MagicMock()
         client._socket = mock_sock
 
@@ -192,7 +191,7 @@ class TestLuxtronikClient:
         assert client._socket is None
 
     def test_destructor(self):
-        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client = Luxtronik("192.168.1.100", DEFAULT_PORT, 10.0, DEFAULT_MAX_DATA_LENGTH)
         # Just ensure __del__ doesn't raise
         client.__del__()
 
@@ -203,7 +202,7 @@ class TestLuxtronikClient:
 
 
 class TestDiscover:
-    @patch("custom_components.luxtronik.lux_helper.socket.socket")
+    @patch("custom_components.luxtronik2.lux_helper.socket.socket")
     def test_discover_finds_heatpump(self, mock_socket_class):
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -231,7 +230,7 @@ class TestDiscover:
         # Results depend on the mock behavior
         assert isinstance(results, list)
 
-    @patch("custom_components.luxtronik.lux_helper.socket.socket")
+    @patch("custom_components.luxtronik2.lux_helper.socket.socket")
     def test_discover_timeout_no_results(self, mock_socket_class):
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
@@ -294,45 +293,49 @@ class TestIsSocketClosed:
 
 
 class TestLuxtronikReadWrite:
-    @patch("custom_components.luxtronik.lux_helper.socket.socket")
+    @patch("custom_components.luxtronik2.lux_helper.socket.socket")
     def test_read_write_os_error_disconnects(self, mock_socket_class):
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
 
-        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client = Luxtronik("192.168.1.100", DEFAULT_PORT, 10.0, DEFAULT_MAX_DATA_LENGTH)
         client._socket = mock_sock
 
         # Make _read raise OSError
-        with patch.object(client, "_read", side_effect=OSError("socket err")):
-            with pytest.raises(OSError):
-                client._read_write(write=False)
+        with (
+            patch.object(client, "_read", side_effect=OSError("socket err")),
+            pytest.raises(OSError),
+        ):
+            client._read_write(write=False)
 
-    @patch("custom_components.luxtronik.lux_helper.socket.socket")
+    @patch("custom_components.luxtronik2.lux_helper.socket.socket")
     def test_read_write_struct_error_disconnects(self, mock_socket_class):
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
 
-        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client = Luxtronik("192.168.1.100", DEFAULT_PORT, 10.0, DEFAULT_MAX_DATA_LENGTH)
         client._socket = mock_sock
 
-        with patch.object(client, "_read", side_effect=struct.error("bad data")):
-            with pytest.raises(struct.error):
-                client._read_write(write=False)
+        with (
+            patch.object(client, "_read", side_effect=struct.error("bad data")),
+            pytest.raises(struct.error),
+        ):
+            client._read_write(write=False)
 
     def test_write_no_socket_raises(self):
-        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client = Luxtronik("192.168.1.100", DEFAULT_PORT, 10.0, DEFAULT_MAX_DATA_LENGTH)
         client._socket = None
         with pytest.raises(OSError, match="Cannot write"):
             client._write()
 
-    @patch("custom_components.luxtronik.lux_helper.socket.socket")
+    @patch("custom_components.luxtronik2.lux_helper.socket.socket")
     def test_write_sends_parameters(self, mock_socket_class):
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
         # recv returns packed ints for cmd and val responses
         mock_sock.recv.return_value = struct.pack(">i", 0)
 
-        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client = Luxtronik("192.168.1.100", DEFAULT_PORT, 10.0, DEFAULT_MAX_DATA_LENGTH)
         client._socket = mock_sock
         client.parameters.queue = {1: 42}
 
@@ -341,12 +344,12 @@ class TestLuxtronikReadWrite:
         mock_sock.sendall.assert_called_once()
         assert client.parameters.queue == {}
 
-    @patch("custom_components.luxtronik.lux_helper.socket.socket")
+    @patch("custom_components.luxtronik2.lux_helper.socket.socket")
     def test_write_skips_invalid_params(self, mock_socket_class):
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
 
-        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client = Luxtronik("192.168.1.100", DEFAULT_PORT, 10.0, DEFAULT_MAX_DATA_LENGTH)
         client._socket = mock_sock
         client.parameters.queue = {"bad_key": "bad_val"}
 
@@ -354,13 +357,13 @@ class TestLuxtronikReadWrite:
 
         mock_sock.sendall.assert_not_called()
 
-    @patch("custom_components.luxtronik.lux_helper.socket.socket")
+    @patch("custom_components.luxtronik2.lux_helper.socket.socket")
     def test_write_converts_float_to_int(self, mock_socket_class):
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
         mock_sock.recv.return_value = struct.pack(">i", 0)
 
-        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client = Luxtronik("192.168.1.100", DEFAULT_PORT, 10.0, DEFAULT_MAX_DATA_LENGTH)
         client._socket = mock_sock
         client.parameters.queue = {5: 21.0}
 
@@ -370,10 +373,10 @@ class TestLuxtronikReadWrite:
 
 
 class TestLuxtronikReadData:
-    @patch("custom_components.luxtronik.lux_helper.socket.socket")
+    @patch("custom_components.luxtronik2.lux_helper.socket.socket")
     def test_read_data_oversized_length(self, mock_socket_class):
         """Data with length > max_data_length should be skipped."""
-        from custom_components.luxtronik.lux_helper import (
+        from custom_components.luxtronik2.lux_helper import (
             LUXTRONIK_PARAMETERS_READ,
             LUXTRONIK_SOCKET_READ_SIZE_INTEGER,
         )
@@ -386,7 +389,7 @@ class TestLuxtronikReadData:
             struct.pack(">i", 99999),
         ]
 
-        client = Luxtronik("192.168.1.100", 8889, 10.0, 100)
+        client = Luxtronik("192.168.1.100", DEFAULT_PORT, 10.0, 100)
         client._socket = mock_sock
         parser = MagicMock()
 
@@ -400,10 +403,10 @@ class TestLuxtronikReadData:
 
         parser.parse.assert_not_called()
 
-    @patch("custom_components.luxtronik.lux_helper.socket.socket")
+    @patch("custom_components.luxtronik2.lux_helper.socket.socket")
     def test_read_data_success_parameters(self, mock_socket_class):
         """Successfully reads parameter data."""
-        from custom_components.luxtronik.lux_helper import (
+        from custom_components.luxtronik2.lux_helper import (
             LUXTRONIK_PARAMETERS_READ,
             LUXTRONIK_SOCKET_READ_SIZE_INTEGER,
         )
@@ -419,7 +422,7 @@ class TestLuxtronikReadData:
             struct.pack(">i", 200),  # item 2
         ]
 
-        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client = Luxtronik("192.168.1.100", DEFAULT_PORT, 10.0, DEFAULT_MAX_DATA_LENGTH)
         client._socket = mock_sock
         parser = MagicMock()
 
@@ -433,10 +436,10 @@ class TestLuxtronikReadData:
 
         parser.parse.assert_called_once_with([100, 200])
 
-    @patch("custom_components.luxtronik.lux_helper.socket.socket")
+    @patch("custom_components.luxtronik2.lux_helper.socket.socket")
     def test_read_data_calculations_has_stat_field(self, mock_socket_class):
         """Calculations read includes extra stat field."""
-        from custom_components.luxtronik.lux_helper import (
+        from custom_components.luxtronik2.lux_helper import (
             LUXTRONIK_CALCULATIONS_READ,
             LUXTRONIK_SOCKET_READ_SIZE_INTEGER,
         )
@@ -451,7 +454,7 @@ class TestLuxtronikReadData:
             struct.pack(">i", 42),  # item
         ]
 
-        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client = Luxtronik("192.168.1.100", DEFAULT_PORT, 10.0, DEFAULT_MAX_DATA_LENGTH)
         client._socket = mock_sock
         parser = MagicMock()
 
@@ -465,12 +468,12 @@ class TestLuxtronikReadData:
 
         parser.parse.assert_called_once_with([42])
 
-    @patch("custom_components.luxtronik.lux_helper.socket.socket")
+    @patch("custom_components.luxtronik2.lux_helper.socket.socket")
     def test_read_data_visibilities_zero_length_disconnects(self, mock_socket_class):
         """Visibilities with length <= 0 forces disconnect."""
-        from custom_components.luxtronik.lux_helper import (
-            LUXTRONIK_VISIBILITIES_READ,
+        from custom_components.luxtronik2.lux_helper import (
             LUXTRONIK_SOCKET_READ_SIZE_CHAR,
+            LUXTRONIK_VISIBILITIES_READ,
         )
 
         mock_sock = MagicMock()
@@ -481,7 +484,7 @@ class TestLuxtronikReadData:
             struct.pack(">i", 0),  # length = 0
         ]
 
-        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client = Luxtronik("192.168.1.100", DEFAULT_PORT, 10.0, DEFAULT_MAX_DATA_LENGTH)
         client._socket = mock_sock
         parser = MagicMock()
 
@@ -496,11 +499,11 @@ class TestLuxtronikReadData:
         parser.parse.assert_not_called()
         assert client._socket is None  # disconnected
 
-    @patch("custom_components.luxtronik.lux_helper.time.sleep")
-    @patch("custom_components.luxtronik.lux_helper.socket.socket")
+    @patch("custom_components.luxtronik2.lux_helper.time.sleep")
+    @patch("custom_components.luxtronik2.lux_helper.socket.socket")
     def test_read_data_retry_on_timeout(self, mock_socket_class, mock_sleep):
         """Retries on TimeoutError."""
-        from custom_components.luxtronik.lux_helper import (
+        from custom_components.luxtronik2.lux_helper import (
             LUXTRONIK_PARAMETERS_READ,
             LUXTRONIK_SOCKET_READ_SIZE_INTEGER,
         )
@@ -524,7 +527,7 @@ class TestLuxtronikReadData:
 
         mock_sock.recv.side_effect = recv_side_effect
 
-        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client = Luxtronik("192.168.1.100", DEFAULT_PORT, 10.0, DEFAULT_MAX_DATA_LENGTH)
         client._socket = mock_sock
         parser = MagicMock()
 
@@ -539,10 +542,10 @@ class TestLuxtronikReadData:
         parser.parse.assert_called_once_with([99])
         mock_sleep.assert_called_once_with(1)
 
-    @patch("custom_components.luxtronik.lux_helper.socket.socket")
+    @patch("custom_components.luxtronik2.lux_helper.socket.socket")
     def test_read_data_unexpected_error_disconnects(self, mock_socket_class):
         """Unexpected errors disconnect and return."""
-        from custom_components.luxtronik.lux_helper import (
+        from custom_components.luxtronik2.lux_helper import (
             LUXTRONIK_PARAMETERS_READ,
             LUXTRONIK_SOCKET_READ_SIZE_INTEGER,
         )
@@ -551,7 +554,7 @@ class TestLuxtronikReadData:
         mock_socket_class.return_value = mock_sock
         mock_sock.recv.side_effect = ValueError("unexpected")
 
-        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client = Luxtronik("192.168.1.100", DEFAULT_PORT, 10.0, DEFAULT_MAX_DATA_LENGTH)
         client._socket = mock_sock
         parser = MagicMock()
 
@@ -565,13 +568,13 @@ class TestLuxtronikReadData:
 
         parser.parse.assert_not_called()
 
-    @patch("custom_components.luxtronik.lux_helper.socket.socket")
+    @patch("custom_components.luxtronik2.lux_helper.socket.socket")
     def test_read_calls_all_three_groups(self, mock_socket_class):
         """_read calls _read_data for parameters, calculations, visibilities."""
         mock_sock = MagicMock()
         mock_socket_class.return_value = mock_sock
 
-        client = Luxtronik("192.168.1.100", 8889, 10.0, 10000)
+        client = Luxtronik("192.168.1.100", DEFAULT_PORT, 10.0, DEFAULT_MAX_DATA_LENGTH)
         client._socket = mock_sock
 
         with patch.object(client, "_read_data") as mock_read_data:

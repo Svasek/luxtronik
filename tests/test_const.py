@@ -1,16 +1,16 @@
-"""Tests for custom_components.luxtronik.const."""
+"""Tests for custom_components.luxtronik2.const."""
 
 from __future__ import annotations
 
-from custom_components.luxtronik.const import (
-    DOMAIN,
+from custom_components.luxtronik2.const import (
     CONFIG_ENTRY_VERSION,
+    DEFAULT_MAX_DATA_LENGTH,
     DEFAULT_PORT,
     DEFAULT_TIMEOUT,
-    DEFAULT_MAX_DATA_LENGTH,
+    DOMAIN,
+    PLATFORMS,
     DeviceKey,
     LuxCalculation,
-    LuxDaySelectorParameter,
     LuxMkTypes,
     LuxMode,
     LuxOperationMode,
@@ -19,10 +19,7 @@ from custom_components.luxtronik.const import (
     LuxStatus1Option,
     LuxStatus3Option,
     LuxVisibility,
-    SensorAttrFormat,
-    SensorAttrKey,
     SensorKey,
-    PLATFORMS,
 )
 
 
@@ -31,7 +28,7 @@ class TestConstants:
         assert DOMAIN == "luxtronik2"
 
     def test_config_version(self):
-        assert CONFIG_ENTRY_VERSION == 8
+        assert CONFIG_ENTRY_VERSION == 9
 
     def test_default_port(self):
         assert DEFAULT_PORT == 8889

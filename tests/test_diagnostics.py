@@ -1,14 +1,14 @@
-"""Tests for custom_components.luxtronik.diagnostics."""
+"""Tests for custom_components.luxtronik2.diagnostics."""
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
-
-from custom_components.luxtronik.diagnostics import _dump_items
+from unittest.mock import AsyncMock, MagicMock
 
 from conftest import FakeSensorItem
+import pytest
+
+from custom_components.luxtronik2.const import DEFAULT_PORT
+from custom_components.luxtronik2.diagnostics import _dump_items
 
 
 class TestDumpItems:
@@ -20,7 +20,7 @@ class TestDumpItems:
         items = {0: FakeSensorItem("test_param", 42)}
         result = _dump_items(items)
         assert len(result) == 1
-        key = list(result.keys())[0]
+        key = next(iter(result.keys()))
         assert "0" in key
         assert "test_param" in key
 
@@ -42,7 +42,7 @@ class TestDumpItems:
 class TestAsyncGetConfigEntryDiagnostics:
     @pytest.mark.asyncio
     async def test_returns_diagnostics(self):
-        from custom_components.luxtronik.diagnostics import (
+        from custom_components.luxtronik2.diagnostics import (
             async_get_config_entry_diagnostics,
         )
 
@@ -61,7 +61,7 @@ class TestAsyncGetConfigEntryDiagnostics:
 
         entry = MagicMock()
         entry.runtime_data = coordinator
-        entry.data = {"host": "192.168.1.100", "port": 8889}
+        entry.data = {"host": "192.168.1.100", "port": DEFAULT_PORT}
         entry.as_dict.return_value = {"data": {"host": "192.168.1.100"}}
 
         result = await async_get_config_entry_diagnostics(hass, entry)
@@ -76,7 +76,7 @@ class TestAsyncGetConfigEntryDiagnostics:
 
     @pytest.mark.asyncio
     async def test_no_mac(self):
-        from custom_components.luxtronik.diagnostics import (
+        from custom_components.luxtronik2.diagnostics import (
             async_get_config_entry_diagnostics,
         )
 
