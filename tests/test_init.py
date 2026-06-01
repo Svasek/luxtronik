@@ -11,6 +11,7 @@ import pytest
 
 from custom_components.luxtronik2 import (
     _async_update_config_entry,
+    _check_firmware_version,
     _fix_select_entity_unique_ids,
     _identifiers_exists,
     _up_many,
@@ -489,6 +490,93 @@ class TestAsyncSetupEntry:
         call_args = hass.config_entries.async_update_entry.call_args
         title = call_args.kwargs.get("title", "")
         assert "Luxtronik @" in title
+
+    @pytest.mark.asyncio
+    async def test_connection_failure_creates_repair_issue(self):
+        """Connection failure creates a repair issue and raises ConfigEntryNotReady."""
+        hass = MagicMock()
+        entry = _mock_entry()
+
+        with (
+            patch(
+                "custom_components.luxtronik2.connect_and_get_coordinator",
+                side_effect=ConnectionRefusedError("refused"),
+            ),
+            patch("custom_components.luxtronik2.ir.async_create_issue") as mock_create,
+            pytest.raises(ConfigEntryNotReady),
+        ):
+            await async_setup_entry(hass, entry)
+
+        mock_create.assert_called_once()
+        call_kwargs = mock_create.call_args[1]
+        assert call_kwargs["translation_key"] == "connection_failed"
+        assert call_kwargs["severity"].value == "error"
+        assert entry.data[CONF_HOST] in call_kwargs["translation_placeholders"]["host"]
+
+    @pytest.mark.asyncio
+    async def test_successful_setup_clears_connection_issue(self):
+        """Successful setup clears any previous connection failure issue."""
+        hass = MagicMock()
+        hass.config_entries.async_forward_entry_setups = AsyncMock()
+        hass.services.has_service.return_value = True
+        entry = _mock_entry()
+        coord = _mock_coordinator(hass)
+
+        with (
+            patch(
+                "custom_components.luxtronik2.connect_and_get_coordinator",
+                return_value=coord,
+            ),
+            patch("custom_components.luxtronik2.ir.async_delete_issue") as mock_delete,
+            patch("custom_components.luxtronik2._check_firmware_version"),
+        ):
+            await async_setup_entry(hass, entry)
+
+        mock_delete.assert_any_call(hass, DOMAIN, f"connection_failed_{entry.entry_id}")
+
+
+# ===========================================================================
+# _check_firmware_version
+# ===========================================================================
+
+
+class TestCheckFirmwareVersion:
+    def test_invalid_version_creates_issue(self):
+        """Invalid firmware version creates a repair issue."""
+        from packaging.version import Version
+
+        hass = MagicMock()
+        entry = _mock_entry()
+        coord = MagicMock()
+        coord.firmware_package_version = Version("0")
+        coord.firmware_version = "INVALID_V"
+
+        with patch("custom_components.luxtronik2.ir.async_create_issue") as mock_create:
+            _check_firmware_version(hass, entry, coord)
+
+        mock_create.assert_called_once()
+        call_kwargs = mock_create.call_args[1]
+        assert call_kwargs["translation_key"] == "unsupported_firmware_version"
+        assert call_kwargs["severity"].value == "warning"
+        assert (
+            call_kwargs["translation_placeholders"]["firmware_version"] == "INVALID_V"
+        )
+
+    def test_valid_version_clears_issue(self):
+        """Valid firmware version clears any previous repair issue."""
+        from packaging.version import Version
+
+        hass = MagicMock()
+        entry = _mock_entry()
+        coord = MagicMock()
+        coord.firmware_package_version = Version("3.90.1")
+
+        with patch("custom_components.luxtronik2.ir.async_delete_issue") as mock_delete:
+            _check_firmware_version(hass, entry, coord)
+
+        mock_delete.assert_called_once_with(
+            hass, DOMAIN, f"unsupported_firmware_version_{entry.entry_id}"
+        )
 
 
 # ===========================================================================

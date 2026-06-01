@@ -1016,5 +1016,15 @@
         "parameter_not_writable": {
             "message": "Parametr {parameter} odm\u00edtnut \u2014 zapisovat lze pouze parametry s p\u0159edponami {prefixes}"
         }
+    },
+    "issues": {
+        "connection_failed": {
+            "title": "Nelze se p\u0159ipojit k tepeln\u00e9mu \u010derpadlu Luxtronik",
+            "description": "Integrace se nemohla p\u0159ipojit k tepeln\u00e9mu \u010derpadlu Luxtronik na adrese **{host}:{port}**.\n\nChyba: `{error}`\n\nZkontrolujte pros\u00edm, \u017ee je tepeln\u00e9 \u010derpadlo zapnut\u00e9, s\u00ed\u0165ov\u00e9 p\u0159ipojen\u00ed funguje a host/port jsou spr\u00e1vn\u00e9. Nastaven\u00ed p\u0159ipojen\u00ed m\u016f\u017eete aktualizovat pomoc\u00ed volby **P\u0159ekonfigurovat** v nab\u00eddce integrace."
+        },
+        "unsupported_firmware_version": {
+            "title": "Nepodporovan\u00fd form\u00e1t verze firmwaru",
+            "description": "Verzi firmwaru hl\u00e1\u0161enou tepeln\u00fdm \u010derpadlem (`{firmware_version}`) nebylo mo\u017en\u00e9 rozpoznat. N\u011bkter\u00e9 entity se nemus\u00ed zobrazovat spr\u00e1vn\u011b, proto\u017ee nelze prov\u00e1d\u011bt kontroly verze firmwaru.\n\nZkontrolujte pros\u00edm, zda je pro va\u0161e tepeln\u00e9 \u010derpadlo k dispozici aktualizace firmwaru."
+        }
     }
 }

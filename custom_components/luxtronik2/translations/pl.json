@@ -971,5 +971,15 @@
         "parameter_not_writable": {
             "message": "Parametr {parameter} odrzucony \u2014 tylko parametry z prefiksami {prefixes} s\u0105 zapisywalne"
         }
+    },
+    "issues": {
+        "connection_failed": {
+            "title": "Nie mo\u017cna po\u0142\u0105czy\u0107 si\u0119 z pomp\u0105 ciep\u0142a Luxtronik",
+            "description": "Integracja nie mog\u0142a po\u0142\u0105czy\u0107 si\u0119 z pomp\u0105 ciep\u0142a Luxtronik pod adresem **{host}:{port}**.\n\nB\u0142\u0105d: `{error}`\n\nSprawd\u017a, czy pompa ciep\u0142a jest w\u0142\u0105czona, po\u0142\u0105czenie sieciowe dzia\u0142a, a host/port s\u0105 poprawne. Mo\u017cesz zaktualizowa\u0107 ustawienia po\u0142\u0105czenia za pomoc\u0105 opcji **Rekonfiguruj** w menu integracji."
+        },
+        "unsupported_firmware_version": {
+            "title": "Nieobs\u0142ugiwany format wersji oprogramowania",
+            "description": "Wersja oprogramowania zg\u0142oszona przez pomp\u0119 ciep\u0142a (`{firmware_version}`) nie mog\u0142a zosta\u0107 rozpoznana. Niekt\u00f3re encje mog\u0105 nie by\u0107 wy\u015bwietlane poprawnie, poniewa\u017c nie mo\u017cna wykona\u0107 sprawdze\u0144 wersji oprogramowania.\n\nSprawd\u017a, czy dost\u0119pna jest aktualizacja oprogramowania dla Twojej pompy ciep\u0142a."
+        }
     }
 }

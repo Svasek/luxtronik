@@ -9,10 +9,11 @@ from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TIMEOUT, Platform as P
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady, ServiceValidationError
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import device_registry as dr, issue_registry as ir
 from homeassistant.helpers.entity_registry import (
     async_get,
 )
+from packaging.version import Version
 
 from .common import convert_to_int_if_possible
 from .const import (
@@ -47,7 +48,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: LuxtronikConfigEntry) ->
         await coordinator.async_config_entry_first_refresh()
     except Exception as err:
         LOGGER.error("Luxtronik connection failed: %s", err)
+        ir.async_create_issue(
+            hass,
+            DOMAIN,
+            f"connection_failed_{entry.entry_id}",
+            is_fixable=False,
+            is_persistent=False,
+            severity=ir.IssueSeverity.ERROR,
+            translation_key="connection_failed",
+            translation_placeholders={
+                "host": str(config.get(CONF_HOST, "unknown")),
+                "port": str(config.get(CONF_PORT, "")),
+                "error": str(err),
+            },
+        )
         raise ConfigEntryNotReady from err
+
+    # Clear any previous connection failure issue
+    ir.async_delete_issue(hass, DOMAIN, f"connection_failed_{entry.entry_id}")
+
+    # Check firmware version validity
+    _check_firmware_version(hass, entry, coordinator)
 
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
@@ -74,6 +95,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: LuxtronikConfigEntry) ->
     LOGGER.info("Luxtronik integration setup completed for %s", entry.entry_id)
 
     return True
+
+
+def _check_firmware_version(
+    hass: HomeAssistant,
+    entry: LuxtronikConfigEntry,
+    coordinator: LuxtronikCoordinator,
+) -> None:
+    """Create or clear a repair issue based on firmware version validity."""
+    issue_id = f"unsupported_firmware_version_{entry.entry_id}"
+    if coordinator.firmware_package_version == Version("0"):
+        ir.async_create_issue(
+            hass,
+            DOMAIN,
+            issue_id,
+            is_fixable=False,
+            is_persistent=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key="unsupported_firmware_version",
+            translation_placeholders={
+                "firmware_version": coordinator.firmware_version,
+            },
+        )
+    else:
+        ir.async_delete_issue(hass, DOMAIN, issue_id)
 
 
 def setup_hass_services(hass: HomeAssistant, entry: LuxtronikConfigEntry):
